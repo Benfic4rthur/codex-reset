@@ -43,7 +43,9 @@ Requisitos: macOS 14 ou mais recente e Codex Desktop instalado e autenticado.
 
 Macs com notch: visual integrado ao recorte.
 MacBooks Intel e M1 sem notch: cápsula compacta inteira dentro da barra de menus,
-com o anel e os textos adaptados à altura disponível.
+com porcentagem grande e uma barra horizontal de progresso separada. A altura é
+medida pelo macOS na própria tela, com uma pequena margem para o contorno.
+Projeto, modelo e esforço aparecem em uma linha quando há atividade.
 As contagens do reset semanal e da janela estimada de reset extra diminuem
 em horas e minutos. Uma janela extra encerrada aguarda novos dados.
 

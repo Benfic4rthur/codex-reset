@@ -225,6 +225,7 @@ private final class NotchWindow: NSObject {
     private var geometry: NotchGeometry
     private var hostingView: NSHostingView<NotchRootView>?
     private var pointerTimer: Timer?
+    private var menuBarTimer: Timer?
     private var screenObserver: NSObjectProtocol?
     private var pointerInside = false
 
@@ -253,6 +254,12 @@ private final class NotchWindow: NSObject {
         pointerTimer = Timer.scheduledTimer(withTimeInterval: 0.12, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.updatePointer() }
         }
+        menuBarTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, self.geometry.isCapsule else { return }
+                self.refreshScreen()
+            }
+        }
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
         ) { [weak self] _ in MainActor.assumeIsolated { self?.refreshScreen() } }
@@ -260,7 +267,9 @@ private final class NotchWindow: NSObject {
 
     private func refreshScreen() {
         guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
-        geometry = NotchGeometry(screen: screen)
+        let updated = NotchGeometry(screen: screen)
+        guard geometry != updated else { return }
+        geometry = updated
         panel.setFrame(geometry.frame, display: true)
         hostingView?.rootView = NotchRootView(store: store, geometry: geometry)
         updatePointer()
@@ -284,6 +293,7 @@ private final class NotchWindow: NSObject {
 
     func stop() {
         pointerTimer?.invalidate()
+        menuBarTimer?.invalidate()
         if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
         panel.close()
     }
@@ -389,6 +399,40 @@ private struct QuotaCompactView: View {
     let geometry: NotchGeometry
 
     var body: some View {
+        Group {
+            if geometry.isCapsule {
+                capsuleQuota
+            } else {
+                notchedQuota
+            }
+        }
+        .animation(.easeInOut(duration: 0.35), value: remainingFraction)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Franquia semanal do Codex: " + percentage + " restante")
+    }
+
+    private var capsuleQuota: some View {
+        HStack(spacing: 8) {
+            Text(percentage)
+                .font(.system(size: geometry.capsuleQuotaFontSize, weight: .semibold))
+                .monospacedDigit()
+                .fixedSize(horizontal: true, vertical: false)
+                .contentTransition(.numericText())
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Visual.muted.opacity(0.34))
+                    Capsule().fill(Visual.accent)
+                        .frame(width: proxy.size.width * remainingFraction)
+                }
+            }
+            .frame(width: 24, height: max(4, geometry.compactHeight * 0.18))
+            .accessibilityHidden(true)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var notchedQuota: some View {
         ZStack {
             Circle()
                 .stroke(Visual.muted.opacity(0.34), lineWidth: geometry.quotaStrokeWidth)
@@ -397,7 +441,7 @@ private struct QuotaCompactView: View {
                 .stroke(Visual.accent, style: StrokeStyle(lineWidth: geometry.quotaStrokeWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Text(percentage)
-                .font(.system(size: percentageFontSize, weight: .semibold, design: .rounded))
+                .font(.system(size: percentage == "100%" ? 8 : 9, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.65)
@@ -405,17 +449,7 @@ private struct QuotaCompactView: View {
         }
         .frame(width: geometry.quotaDiameter, height: geometry.quotaDiameter)
         .frame(maxWidth: .infinity, alignment: .trailing)
-        .padding(.trailing, geometry.isCapsule ? (geometry.leftWingWidth - geometry.quotaDiameter) / 2 : 12)
-        .animation(.easeInOut(duration: 0.35), value: remainingFraction)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Franquia semanal do Codex: " + percentage + " restante")
-    }
-
-    private var percentageFontSize: CGFloat {
-        if geometry.isCapsule {
-            return (percentage == "100%" ? 6 : 7.2) * geometry.compactTextScale
-        }
-        return percentage == "100%" ? 8 : 9
+        .padding(.trailing, 12)
     }
 
     private var remainingFraction: CGFloat {
@@ -435,26 +469,53 @@ private struct ThreadCompactView: View {
 
     var body: some View {
         if let thread = store.heaviestThread {
-        VStack(alignment: .leading, spacing: geometry.isCapsule ? 0 : 1) {
+            if geometry.isCapsule {
+                capsuleActivity(thread)
+            } else {
+                notchedActivity(thread)
+            }
+        }
+    }
+
+    private func capsuleActivity(_ thread: ActiveThread) -> some View {
+        HStack(spacing: 7) {
+            Text(thread.projectName)
+                .font(.system(size: geometry.capsuleActivityFontSize, weight: .semibold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 4) {
+                Text(Format.model(thread.model)).foregroundStyle(Visual.secondary)
+                Text("·").foregroundStyle(Visual.muted)
+                Text(Format.effort(thread.effort)).foregroundStyle(Visual.accent)
+            }
+            .font(.system(size: min(12, geometry.capsuleActivityFontSize), weight: .medium))
+            .lineLimit(1)
+            .layoutPriority(1)
+
+            if store.rootThreads.count > 1 {
+                disclosureButton(height: geometry.compactHeight)
+            }
+        }
+        .padding(.leading, 9)
+        .padding(.trailing, 7)
+        .overlay(alignment: .leading) {
+            Rectangle().fill(.white.opacity(0.22)).frame(width: 1, height: 12)
+        }
+    }
+
+    private func notchedActivity(_ thread: ActiveThread) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 2) {
                 Text(thread.projectName)
-                    .font(.system(size: (geometry.isCapsule ? 8.5 : 9.2) * geometry.compactTextScale, weight: .semibold))
+                    .font(.system(size: 9.2, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.65)
                     .foregroundStyle(Visual.primary)
                 Spacer(minLength: 0)
                 if store.rootThreads.count > 1 {
-                    Button { store.toggleThreads() } label: {
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 8, weight: .bold))
-                            .rotationEffect(.degrees(store.listExpanded ? 180 : 0))
-                            .frame(width: 16, height: geometry.isCapsule ? 10 * geometry.compactTextScale : 14)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Visual.primary)
-                    .accessibilityLabel(store.listExpanded ? "Ocultar outras conversas" : "Mostrar outras conversas")
-                    .help(store.listExpanded ? "Ocultar outras conversas" : "Mostrar outras conversas")
+                    disclosureButton(height: 14)
                 }
             }
             HStack(spacing: 3) {
@@ -464,14 +525,27 @@ private struct ThreadCompactView: View {
                 Text(Format.effort(thread.effort))
                     .foregroundStyle(Visual.accent)
             }
-            .font(.system(size: (geometry.isCapsule ? 7 : 8) * geometry.compactTextScale, weight: .medium))
+            .font(.system(size: 8, weight: .medium))
             .lineLimit(1)
             .minimumScaleFactor(0.72)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.leading, 6)
         .padding(.trailing, 4)
+    }
+
+    private func disclosureButton(height: CGFloat) -> some View {
+        Button { store.toggleThreads() } label: {
+            Image(systemName: "chevron.down")
+                .font(.system(size: 8, weight: .bold))
+                .rotationEffect(.degrees(store.listExpanded ? 180 : 0))
+                .frame(width: 16, height: height)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .foregroundStyle(Visual.primary)
+        .accessibilityLabel(store.listExpanded ? "Ocultar outras conversas" : "Mostrar outras conversas")
+        .help(store.listExpanded ? "Ocultar outras conversas" : "Mostrar outras conversas")
     }
 }
 

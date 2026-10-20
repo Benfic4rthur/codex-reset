@@ -1,6 +1,6 @@
 import AppKit
 
-struct NotchGeometry {
+struct NotchGeometry: Equatable {
     let screenFrame: CGRect
     let centerX: CGFloat
     let gapWidth: CGFloat
@@ -17,10 +17,17 @@ struct NotchGeometry {
         let right = screen.auxiliaryTopRightArea?.minX
         let gap = (left != nil && right != nil) ? max(0, right! - left!) : 0
         self.init(screenFrame: screen.frame,
-                  menuBarHeight: screen.frame.maxY - screen.visibleFrame.maxY,
+                  menuBarHeight: Self.menuBarHeight(screenFrame: screen.frame,
+                      visibleFrame: screen.visibleFrame, systemThickness: NSStatusBar.system.thickness),
                   safeAreaTop: screen.safeAreaInsets.top,
                   notchGap: gap,
                   notchCenterX: gap > 100 ? (left! + right!) / 2 : nil)
+    }
+
+    static func menuBarHeight(screenFrame: CGRect, visibleFrame: CGRect, systemThickness: CGFloat) -> CGFloat {
+        let visibleHeight = screenFrame.maxY - visibleFrame.maxY
+        // An automatically hidden menu bar may leave only a reveal boundary.
+        return visibleHeight > 2 ? visibleHeight : systemThickness
     }
 
     init(screenFrame: CGRect, menuBarHeight: CGFloat, safeAreaTop: CGFloat,
@@ -30,10 +37,9 @@ struct NotchGeometry {
         centerX = notchCenterX ?? screenFrame.midX
         if isCapsule {
             gapWidth = 0
-            let barHeight = menuBarHeight > 0 ? menuBarHeight : 24
-            compactHeight = max(1, min(22, barHeight - 2))
-            leftWingWidth = 34
-            rightWingWidth = 140
+            compactHeight = max(1, menuBarHeight - 2)
+            leftWingWidth = 104
+            rightWingWidth = 248
             // Keep both rounded edges inside the menu bar, clear of app windows.
             topInset = 1
         } else {
@@ -46,15 +52,16 @@ struct NotchGeometry {
         }
     }
 
-    var quotaDiameter: CGFloat { isCapsule ? max(1, compactHeight - 4) : 30 }
-    var quotaStrokeWidth: CGFloat { isCapsule ? 1.6 : 2.7 }
-    var compactTextScale: CGFloat { isCapsule ? min(1, compactHeight / 22) : 1 }
+    var quotaDiameter: CGFloat { 30 }
+    var quotaStrokeWidth: CGFloat { 2.7 }
+    var capsuleQuotaFontSize: CGFloat { min(17, max(1, compactHeight - 4)) }
+    var capsuleActivityFontSize: CGFloat { min(13, max(1, compactHeight - 4)) }
 
     func compactWidth(hasActivity: Bool) -> CGFloat {
         leftWingWidth + gapWidth + (isCapsule && !hasActivity ? 0 : rightWingWidth)
     }
 
-    var expandedWidth: CGFloat { isCapsule ? 320 : compactWidth(hasActivity: true) }
+    var expandedWidth: CGFloat { isCapsule ? max(320, compactWidth(hasActivity: true)) : compactWidth(hasActivity: true) }
     var envelopeWidth: CGFloat { expandedWidth + 8 }
     var envelopeHeight: CGFloat { compactHeight + listDetailHeight + 8 }
     var surfaceCenterX: CGFloat {
