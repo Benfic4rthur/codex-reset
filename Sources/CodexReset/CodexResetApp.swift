@@ -313,8 +313,9 @@ private enum Visual {
     static let accent = Color(red: 0.40, green: 0.83, blue: 0.76)
 }
 
-private struct NotchSurface: Shape {
+struct NotchSurface: Shape {
     var width: CGFloat
+    let compactWidth: CGFloat
     let compactHeight: CGFloat
     var visibleDepth: CGFloat
     let isCapsule: Bool
@@ -327,31 +328,37 @@ private struct NotchSurface: Shape {
     func path(in rect: CGRect) -> Path {
         let depth = max(0, visibleDepth)
         let center = rect.midX
-        let left = center - width / 2
-        let right = center + width / 2
         let bottom = compactHeight + depth
         let corner: CGFloat = isCapsule ? min(17, compactHeight / 2) : 17
 
         if isCapsule {
-            return Path(roundedRect: CGRect(x: left, y: 0, width: width, height: bottom),
+            return Path(roundedRect: CGRect(x: center - width / 2, y: 0, width: width, height: bottom),
                         cornerRadius: corner)
         }
 
-        var path = Path()
-        path.move(to: CGPoint(x: left, y: 0))
-        path.addLine(to: CGPoint(x: right, y: 0))
-        path.addLine(to: CGPoint(x: right, y: bottom - corner))
-        path.addQuadCurve(
-            to: CGPoint(x: right - corner, y: bottom),
-            control: CGPoint(x: right, y: bottom)
-        )
-        path.addLine(to: CGPoint(x: left + corner, y: bottom))
-        path.addQuadCurve(
-            to: CGPoint(x: left, y: bottom - corner),
-            control: CGPoint(x: left, y: bottom)
-        )
-        path.addLine(to: CGPoint(x: left, y: 0))
-        path.closeSubpath()
+        func surface(width: CGFloat, top: CGFloat, bottom: CGFloat, corner: CGFloat) -> Path {
+            let left = center - width / 2
+            let right = center + width / 2
+            var path = Path()
+            path.move(to: CGPoint(x: left, y: top))
+            path.addLine(to: CGPoint(x: right, y: top))
+            path.addLine(to: CGPoint(x: right, y: bottom - corner))
+            path.addQuadCurve(to: CGPoint(x: right - corner, y: bottom),
+                control: CGPoint(x: right, y: bottom))
+            path.addLine(to: CGPoint(x: left + corner, y: bottom))
+            path.addQuadCurve(to: CGPoint(x: left, y: bottom - corner),
+                control: CGPoint(x: left, y: bottom))
+            path.addLine(to: CGPoint(x: left, y: top))
+            path.closeSubpath()
+            return path
+        }
+
+        var path = surface(width: compactWidth, top: 0, bottom: compactHeight, corner: 17)
+        if depth > 0 {
+            // The details may expand below the menu bar without widening its top.
+            path.addPath(surface(width: max(width, compactWidth), top: compactHeight,
+                bottom: bottom, corner: min(17, depth / 2)))
+        }
         return path
     }
 }
@@ -389,6 +396,7 @@ private struct NotchRootView: View {
         .background(alignment: .top) {
             NotchSurface(
                 width: expanded ? geometry.expandedWidth : compactWidth,
+                compactWidth: compactWidth,
                 compactHeight: geometry.compactHeight,
                 visibleDepth: visibleDepth,
                 isCapsule: geometry.isCapsule
@@ -581,9 +589,9 @@ private struct CenteredDetailView: View {
 
                     Rectangle()
                         .fill(.white.opacity(0.18))
-                        .frame(width: 1, height: 54)
+                        .frame(width: 1, height: 36)
                         .padding(.horizontal, 13)
-                        .padding(.top, 2)
+                        .padding(.top, 22)
 
                     VStack(spacing: 3) {
                         Text("RESET SEMANAL").detailHeading()
@@ -633,7 +641,7 @@ private struct CenteredDetailView: View {
             .frame(maxWidth: .infinity)
             .frame(height: height, alignment: .top)
             .multilineTextAlignment(.center)
-            .overlay(alignment: .topTrailing) {
+            .overlay(alignment: .top) {
                 Button { NSApp.terminate(nil) } label: {
                     Image(systemName: "power")
                         .font(.system(size: 10, weight: .medium))
@@ -643,8 +651,9 @@ private struct CenteredDetailView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(Visual.muted)
                 .accessibilityLabel("Fechar Codex Reset")
-                .padding(.trailing, 13)
-                .padding(.top, 6)
+                .help("Fechar Codex Reset")
+                .modifier(PointingHandCursor())
+                .padding(.top, 2)
             }
         }
     }
@@ -692,6 +701,25 @@ private struct CenteredDetailView: View {
         return "Em \(countdown)"
     }
 
+}
+
+private struct PointingHandCursor: ViewModifier {
+    @State private var hovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .onHover { inside in
+                guard inside != hovering else { return }
+                hovering = inside
+                if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            }
+            .onDisappear {
+                if hovering {
+                    NSCursor.pop()
+                    hovering = false
+                }
+            }
+    }
 }
 
 private extension View {
