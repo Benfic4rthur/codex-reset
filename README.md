@@ -11,7 +11,7 @@ Sua franquia do Codex sempre à vista. Um monitor nativo para macOS que mostra a
 | Apple Silicon · M1, M2, M3 e posteriores | Intel · x86_64 |
 | :---: | :---: |
 | **[⬇ Baixar para Apple Silicon](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Apple-Silicon.dmg)** | **[⬇ Baixar para Intel](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Intel.dmg)** |
-| Com notch: visual integrado ao recorte. Sem notch, incluindo M1: cápsula no topo | Cápsula centralizada, a 5 pixels do topo da tela |
+| Com notch: visual integrado ao recorte. Sem notch, incluindo M1: cápsula no topo | Cápsula compacta dentro da barra de menus |
 
 ### Depois de instalar: liberar no Terminal
 
@@ -49,10 +49,10 @@ Para atualizar, feche o Codex Reset pelo botão de desligar que aparece ao passa
 
 - **Franquia:** anel com a porcentagem restante da janela semanal. Atualiza a cada 30 segundos usando uma conexão local reutilizada com o Codex App Server.
 - **Atividade:** projeto, modelo e esforço da conversa ativa mais pesada. Sem atividade, aparece apenas a franquia. A seta aparece quando há mais de uma conversa ativa. A lista atualiza a cada 5 segundos.
-- **Renovação semanal:** ao passar o mouse, aparece o tempo até a renovação informada pela conta.
-- **Reset extra:** estimativa histórica baseada em [codex-resets.com](https://codex-resets.com/), atualizada a cada 5 minutos. Não representa uma promessa nem um aviso antecipado da OpenAI.
+- **Renovação semanal:** ao passar o mouse, aparece uma contagem regressiva em horas e minutos até a renovação informada pela conta, atualizada a cada minuto.
+- **Reset extra:** janela histórica baseada em [codex-resets.com](https://codex-resets.com/), com datas estimadas de início e fim ancoradas no último reset observado. A contagem diminui em horas e minutos, a cada minuto. O histórico é consultado a cada 5 minutos; consultar os mesmos dados não reinicia o prazo. Quando a janela termina, aparece “Janela encerrada”, aguardando novos dados. Não representa uma promessa nem um aviso antecipado da OpenAI.
 
-Nos MacBooks Intel e nos M1 sem notch, a cápsula fica centralizada, a 5 pixels da borda superior da tela, logo abaixo da câmera. Essa pequena folga mantém o contorno arredondado e o tamanho inteiro visíveis. Ela ocupa apenas o espaço da franquia quando não há atividade e cresce quando há conversas. Nos Macs com notch, o visual continua integrado ao recorte. O aplicativo detecta o tipo de tela automaticamente.
+Nos MacBooks Intel e nos M1 sem notch, a cápsula compacta fica centralizada e inteira dentro da altura da barra de menus. A altura, o anel e os textos se adaptam à barra, com uma pequena margem para manter o contorno arredondado visível. Ela ocupa apenas o espaço da franquia quando não há atividade e cresce na horizontal quando há conversas. Os detalhes se abrem ao passar o mouse. Nos Macs com notch, o visual continua integrado ao recorte. O aplicativo detecta o tipo de tela automaticamente.
 
 ## Privacidade
 

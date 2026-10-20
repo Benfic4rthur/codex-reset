@@ -13,6 +13,7 @@ let package = Package(
             name: "CodexReset",
             linkerSettings: [.linkedLibrary("sqlite3")]
         ),
-        .executableTarget(name: "CodexResetCompanion")
+        .executableTarget(name: "CodexResetCompanion"),
+        .testTarget(name: "CodexResetTests", dependencies: ["CodexReset"])
     ]
 )

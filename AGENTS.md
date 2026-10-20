@@ -3,7 +3,8 @@
 ## Produto e distribuição
 
 - O repositório é público. Cada instalação precisa usar o login, a franquia e os arquivos locais do próprio usuário.
-- Preserve o visual integrado ao recorte nos Macs com notch. Em telas sem notch, incluindo MacBooks Intel e M1, use a cápsula centralizada, a 5 pixels da borda superior da tela, mantendo o tamanho inteiro e o contorno arredondado visível. Detecte o notch pela tela; não limite a cápsula à arquitetura Intel.
+- Preserve o visual integrado ao recorte nos Macs com notch. Em telas sem notch, incluindo MacBooks Intel e M1, mantenha a cápsula compacta inteira dentro da altura da barra de menus, centralizada e com uma pequena margem no topo. Redimensione também o anel e os textos para não invadir as janelas em modo compacto. Detecte o notch pela tela; não limite a cápsula à arquitetura Intel.
+- A previsão de reset extra deve usar datas de início e fim estimadas a partir do último reset observado. A contagem deve diminuir em horas e minutos, sem reiniciar a cada consulta com os mesmos dados. Se a janela passar, mostre que ela terminou e aguarde novos dados. Preserve a indicação de estimativa histórica.
 - Não use GitHub Actions, pipelines, serviços ou configurações de CI. O GitHub Actions deve continuar desativado no repositório.
 - Compile e confira os artefatos localmente. Publique atualizações funcionais em GitHub Releases com os dois DMGs, Apple Silicon e Intel, usando scripts/publish-release.sh.
 - Para cada versão, incremente os dois campos de versão em Info.plist e mantenha as notas em releases/vVERSAO.md. Os links de download no README devem continuar apontando para a última Release.

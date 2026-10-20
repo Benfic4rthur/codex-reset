@@ -313,7 +313,7 @@ private struct NotchSurface: Shape {
         let left = center - width / 2
         let right = center + width / 2
         let bottom = compactHeight + depth
-        let corner: CGFloat = 17
+        let corner: CGFloat = isCapsule ? min(17, compactHeight / 2) : 17
 
         if isCapsule {
             return Path(roundedRect: CGRect(x: left, y: 0, width: width, height: bottom),
@@ -352,11 +352,10 @@ private struct NotchRootView: View {
         let rightWidth = geometry.isCapsule && !hasActivity ? 0 : geometry.rightWingWidth
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                QuotaCompactView(store: store)
+                QuotaCompactView(store: store, geometry: geometry)
                     .frame(width: geometry.leftWingWidth, height: geometry.compactHeight)
-                    .offset(x: geometry.isCapsule ? 3 : 0)
                 Color.clear.frame(width: geometry.gapWidth, height: geometry.compactHeight)
-                ThreadCompactView(store: store)
+                ThreadCompactView(store: store, geometry: geometry)
                     .frame(width: rightWidth, height: geometry.compactHeight)
             }
             .frame(width: compactWidth, height: geometry.compactHeight)
@@ -387,26 +386,36 @@ private struct NotchRootView: View {
 
 private struct QuotaCompactView: View {
     @ObservedObject var store: DashboardStore
+    let geometry: NotchGeometry
 
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Visual.muted.opacity(0.34), lineWidth: 2.7)
+                .stroke(Visual.muted.opacity(0.34), lineWidth: geometry.quotaStrokeWidth)
             Circle()
                 .trim(from: 0, to: remainingFraction)
-                .stroke(Visual.accent, style: StrokeStyle(lineWidth: 2.7, lineCap: .round))
+                .stroke(Visual.accent, style: StrokeStyle(lineWidth: geometry.quotaStrokeWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Text(percentage)
-                .font(.system(size: percentage == "100%" ? 8 : 9, weight: .semibold, design: .rounded))
+                .font(.system(size: percentageFontSize, weight: .semibold, design: .rounded))
                 .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
                 .contentTransition(.numericText())
         }
-        .frame(width: 30, height: 30)
+        .frame(width: geometry.quotaDiameter, height: geometry.quotaDiameter)
         .frame(maxWidth: .infinity, alignment: .trailing)
-        .padding(.trailing, 12)
+        .padding(.trailing, geometry.isCapsule ? (geometry.leftWingWidth - geometry.quotaDiameter) / 2 : 12)
         .animation(.easeInOut(duration: 0.35), value: remainingFraction)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Franquia semanal do Codex: " + percentage + " restante")
+    }
+
+    private var percentageFontSize: CGFloat {
+        if geometry.isCapsule {
+            return (percentage == "100%" ? 6 : 7.2) * geometry.compactTextScale
+        }
+        return percentage == "100%" ? 8 : 9
     }
 
     private var remainingFraction: CGFloat {
@@ -422,13 +431,14 @@ private struct QuotaCompactView: View {
 
 private struct ThreadCompactView: View {
     @ObservedObject var store: DashboardStore
+    let geometry: NotchGeometry
 
     var body: some View {
         if let thread = store.heaviestThread {
-        VStack(alignment: .leading, spacing: 1) {
+        VStack(alignment: .leading, spacing: geometry.isCapsule ? 0 : 1) {
             HStack(spacing: 2) {
                 Text(thread.projectName)
-                    .font(.system(size: 9.2, weight: .semibold))
+                    .font(.system(size: (geometry.isCapsule ? 8.5 : 9.2) * geometry.compactTextScale, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.65)
                     .foregroundStyle(Visual.primary)
@@ -438,7 +448,7 @@ private struct ThreadCompactView: View {
                         Image(systemName: "chevron.down")
                             .font(.system(size: 8, weight: .bold))
                             .rotationEffect(.degrees(store.listExpanded ? 180 : 0))
-                            .frame(width: 16, height: 14)
+                            .frame(width: 16, height: geometry.isCapsule ? 10 * geometry.compactTextScale : 14)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -454,7 +464,7 @@ private struct ThreadCompactView: View {
                 Text(Format.effort(thread.effort))
                     .foregroundStyle(Visual.accent)
             }
-            .font(.system(size: 8, weight: .medium))
+            .font(.system(size: (geometry.isCapsule ? 7 : 8) * geometry.compactTextScale, weight: .medium))
             .lineLimit(1)
             .minimumScaleFactor(0.72)
         }
@@ -479,7 +489,7 @@ private struct CenteredDetailView: View {
                         Text(extraHeadline(at: context.date))
                             .font(.system(size: 11.5, weight: .semibold))
                             .lineLimit(1)
-                        Text(extraCaption)
+                        Text(extraCaption(at: context.date))
                             .font(.system(size: 9))
                             .foregroundStyle(Visual.secondary)
                             .lineLimit(1)
@@ -557,38 +567,47 @@ private struct CenteredDetailView: View {
             return store.forecastError == nil ? "Buscando previsão…" : "Previsão indisponível"
         }
         if let announcement = forecast.scheduledReset {
-            if let date = announcement.scheduledFor, date > now {
-                return "Anunciado para \(Format.date(date))"
+            if let date = announcement.scheduledFor {
+                if let countdown = ResetCountdown.remaining(until: date, at: now) {
+                    return "Em \(countdown)"
+                }
+                return "Horário anunciado passou"
             }
             return "Reset extra anunciado"
         }
-        if let window = forecast.likelyWindow { return "Possível \(window)" }
+        if let window = forecast.estimatedWindow {
+            let countdown = window.countdown(at: now)
+            return now >= window.endsAt ? countdown : "≈ \(countdown)"
+        }
         return "Sem previsão confiável"
     }
 
-    private var extraCaption: String {
+    private func extraCaption(at now: Date) -> String {
         guard let forecast = store.forecast else {
             return store.forecastError == nil ? "Histórico em atualização" : "Fonte indisponível"
         }
-        if forecast.scheduledReset != nil { return "Anúncio verificado na fonte" }
-        guard let chance = forecast.probabilityNext7Days else {
-            return "Histórico insuficiente para estimar"
+        if let announcement = forecast.scheduledReset {
+            if let date = announcement.scheduledFor, date <= now { return "Aguardando confirmação" }
+            return "Anúncio verificado na fonte"
         }
-        return "Chance histórica em 7 dias: \(Int((chance * 100).rounded()))%"
+        if let window = forecast.estimatedWindow {
+            if now >= window.endsAt { return "Aguardando novos dados" }
+            if now >= window.startsAt { return "Dentro da janela estimada" }
+        }
+        guard let chance = forecast.probabilityNext7Days else {
+            return forecast.estimatedWindow == nil ? "Histórico insuficiente para estimar" : "Janela histórica estimada"
+        }
+        return "Histórico: \(Int((chance * 100).rounded()))% em 7d"
     }
 
     private func weeklyHeadline(at now: Date) -> String {
         guard let reset = store.usage?.weeklyWindow?.resetsAt else {
             return "Horário ainda indisponível"
         }
-        let seconds = reset.timeIntervalSince(now)
-        guard seconds > 0 else { return "Aguardando atualização" }
-        let minutes = Int(seconds / 60)
-        let days = minutes / 1_440
-        let hours = (minutes / 60) % 24
-        if days > 0 { return "Em \(days)d \(hours)h" }
-        if hours > 0 { return "Em \(hours)h \(minutes % 60)min" }
-        return "Em \(max(1, minutes)) min"
+        guard let countdown = ResetCountdown.remaining(until: reset, at: now) else {
+            return "Aguardando atualização"
+        }
+        return "Em \(countdown)"
     }
 
 }
@@ -620,10 +639,4 @@ private enum Format {
         }
     }
 
-    static func date(_ value: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "pt_BR")
-        formatter.dateFormat = "d MMM, HH:mm"
-        return formatter.string(from: value)
-    }
 }

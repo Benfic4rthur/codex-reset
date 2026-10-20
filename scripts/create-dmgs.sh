@@ -42,8 +42,10 @@ Requisitos: macOS 14 ou mais recente e Codex Desktop instalado e autenticado.
 5. O monitor aparece enquanto o Codex Desktop está aberto.
 
 Macs com notch: visual integrado ao recorte.
-MacBooks Intel e M1 sem notch: cápsula centralizada, a 5 pixels do topo da tela,
-com seu tamanho inteiro e o contorno arredondado visível.
+MacBooks Intel e M1 sem notch: cápsula compacta inteira dentro da barra de menus,
+com o anel e os textos adaptados à altura disponível.
+As contagens do reset semanal e da janela estimada de reset extra diminuem
+em horas e minutos. Uma janela extra encerrada aguarda novos dados.
 
 Esta distribuição ainda não tem assinatura Developer ID nem notarização da Apple.
 O macOS pode bloquear a abertura até você autorizar o aplicativo.

@@ -8,7 +8,7 @@ struct NotchGeometry {
     let rightWingWidth: CGFloat
     let topInset: CGFloat
     let isCapsule: Bool
-    let leftWingWidth: CGFloat = 48
+    let leftWingWidth: CGFloat
     let detailHeight: CGFloat = 70
     let listDetailHeight: CGFloat = 102
 
@@ -30,18 +30,25 @@ struct NotchGeometry {
         centerX = notchCenterX ?? screenFrame.midX
         if isCapsule {
             gapWidth = 0
-            compactHeight = 34
+            let barHeight = menuBarHeight > 0 ? menuBarHeight : 24
+            compactHeight = max(1, min(22, barHeight - 2))
+            leftWingWidth = 34
             rightWingWidth = 140
-            // Keep the rounded edge visible with a small gap in screen coordinates.
-            topInset = 5
+            // Keep both rounded edges inside the menu bar, clear of app windows.
+            topInset = 1
         } else {
             gapWidth = notchGap > 100 ? notchGap : 160
+            leftWingWidth = 48
             rightWingWidth = 112
             let reservedTop = safeAreaTop > 0 ? safeAreaTop : menuBarHeight
             compactHeight = max(24, reservedTop - 2)
             topInset = 0
         }
     }
+
+    var quotaDiameter: CGFloat { isCapsule ? max(1, compactHeight - 4) : 30 }
+    var quotaStrokeWidth: CGFloat { isCapsule ? 1.6 : 2.7 }
+    var compactTextScale: CGFloat { isCapsule ? min(1, compactHeight / 22) : 1 }
 
     func compactWidth(hasActivity: Bool) -> CGFloat {
         leftWingWidth + gapWidth + (isCapsule && !hasActivity ? 0 : rightWingWidth)
