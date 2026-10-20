@@ -1,0 +1,22 @@
+# Codex Reset
+
+## Produto e distribuição
+
+- O repositório é público. Cada instalação precisa usar o login, a franquia e os arquivos locais do próprio usuário.
+- Preserve o visual atual no Apple Silicon. A cápsula abaixo da barra de menus é específica da versão Intel.
+- Não use GitHub Actions, pipelines, serviços ou configurações de CI. O GitHub Actions deve continuar desativado no repositório.
+- Compile e confira os artefatos localmente. Publique atualizações funcionais em GitHub Releases com os dois DMGs, Apple Silicon e Intel, usando scripts/publish-release.sh.
+- Para cada versão, incremente os dois campos de versão em Info.plist e mantenha as notas em releases/vVERSAO.md. Os links de download no README devem continuar apontando para a última Release.
+- Não sobrescreva uma versão publicada; publique uma versão nova.
+
+## Privacidade
+
+- Nunca versione nem distribua chaves, tokens, arquivos .env, autenticação do Codex, bancos locais, logs, certificados privados ou dados de conversas.
+- Resolva caminhos de usuário em tempo de execução. Não inclua caminhos pessoais de compilação nos executáveis distribuídos.
+- Revise o conteúdo dos DMGs antes da publicação. Eles devem conter apenas o app, um atalho para Aplicativos e instruções públicas.
+- Não inclua certificados pessoais na distribuição nem prometa notarização sem que ela tenha sido realizada.
+
+## Limpeza
+
+- Mantenha todos os artefatos de compilação, DMGs e arquivos temporários dentro de .build/, que está ignorada pelo Git.
+- Após conferir uma publicação solicitada, remova os artefatos temporários locais. Preserve os fontes, o ícone e os scripts necessários para reproduzir a versão.

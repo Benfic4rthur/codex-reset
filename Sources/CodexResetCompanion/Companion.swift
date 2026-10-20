@@ -66,6 +66,7 @@ private struct CompanionMain {
             return
         }
         let appURL = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
-        Companion(appURL: appURL).run()
+        let companion = Companion(appURL: appURL)
+        withExtendedLifetime(companion) { companion.run() }
     }
 }

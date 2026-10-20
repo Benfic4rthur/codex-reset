@@ -26,6 +26,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        do {
+            try CompanionRegistration.installIfNeeded()
+        } catch {
+            NSLog("Codex Reset: início automático indisponível: %@", error.localizedDescription)
+        }
         guard NSRunningApplication.runningApplications(
             withBundleIdentifier: CompanionIdentity.chatGPTBundleID
         ).contains(where: { !$0.isTerminated }) else {
@@ -213,59 +218,6 @@ final class DashboardStore: ObservableObject {
     }
 }
 
-private struct NotchGeometry {
-    let screen: NSScreen
-    let centerX: CGFloat
-    let gapWidth: CGFloat
-    let compactHeight: CGFloat
-    let leftWingWidth: CGFloat = 48
-    let rightWingWidth: CGFloat = 112
-    let detailHeight: CGFloat = 70
-    let listDetailHeight: CGFloat = 102
-
-    init(screen: NSScreen) {
-        self.screen = screen
-        let left = screen.auxiliaryTopLeftArea?.maxX
-        let right = screen.auxiliaryTopRightArea?.minX
-        let physicalGap = (left != nil && right != nil) ? max(0, right! - left!) : 0
-        centerX = physicalGap > 100 ? (left! + right!) / 2 : screen.frame.midX
-        gapWidth = physicalGap > 100 ? physicalGap : 160
-        let menuBarHeight = screen.frame.maxY - screen.visibleFrame.maxY
-        let reservedTop = screen.safeAreaInsets.top > 0 ? screen.safeAreaInsets.top : menuBarHeight
-        compactHeight = max(24, reservedTop - 2)
-    }
-
-    var compactWidth: CGFloat { leftWingWidth + gapWidth + rightWingWidth }
-    var expandedWidth: CGFloat { compactWidth }
-    var envelopeWidth: CGFloat { expandedWidth + 8 }
-    var envelopeHeight: CGFloat { compactHeight + listDetailHeight + 8 }
-    var surfaceCenterX: CGFloat { centerX + (rightWingWidth - leftWingWidth) / 2 }
-    var frame: CGRect {
-        CGRect(x: surfaceCenterX - envelopeWidth / 2,
-               y: screen.frame.maxY - envelopeHeight,
-               width: envelopeWidth, height: envelopeHeight)
-    }
-
-    func topContains(_ point: CGPoint) -> Bool {
-        let x = (envelopeWidth - compactWidth) / 2
-        return point.x >= x && point.x <= x + compactWidth
-            && point.y >= envelopeHeight - compactHeight && point.y <= envelopeHeight
-    }
-
-    func detailContains(_ point: CGPoint, height: CGFloat) -> Bool {
-        let x = (envelopeWidth - expandedWidth) / 2
-        return point.x >= x && point.x <= x + expandedWidth
-            && point.y >= envelopeHeight - compactHeight - height
-            && point.y < envelopeHeight - compactHeight
-    }
-
-    func disclosureContains(_ point: CGPoint) -> Bool {
-        let rightEdge = (envelopeWidth + compactWidth) / 2
-        return point.x >= rightEdge - 26 && point.x <= rightEdge
-            && point.y >= envelopeHeight - compactHeight && point.y <= envelopeHeight
-    }
-}
-
 @MainActor
 private final class NotchWindow: NSObject {
     private let store: DashboardStore
@@ -317,7 +269,7 @@ private final class NotchWindow: NSObject {
     private func updatePointer() {
         let point = panel.convertPoint(fromScreen: NSEvent.mouseLocation)
         let detailHeight = store.listExpanded ? geometry.listDetailHeight : geometry.detailHeight
-        let hovering = geometry.topContains(point)
+        let hovering = geometry.topContains(point, hasActivity: store.heaviestThread != nil)
             || ((store.showHoverDetails || store.listExpanded)
                 && geometry.detailContains(point, height: detailHeight))
         if hovering != pointerInside {
@@ -345,13 +297,14 @@ private enum Visual {
 }
 
 private struct NotchSurface: Shape {
-    let width: CGFloat
+    var width: CGFloat
     let compactHeight: CGFloat
     var visibleDepth: CGFloat
+    let isCapsule: Bool
 
-    var animatableData: CGFloat {
-        get { visibleDepth }
-        set { visibleDepth = newValue }
+    var animatableData: AnimatablePair<CGFloat, CGFloat> {
+        get { AnimatablePair(width, visibleDepth) }
+        set { width = newValue.first; visibleDepth = newValue.second }
     }
 
     func path(in rect: CGRect) -> Path {
@@ -361,6 +314,11 @@ private struct NotchSurface: Shape {
         let right = center + width / 2
         let bottom = compactHeight + depth
         let corner: CGFloat = 17
+
+        if isCapsule {
+            return Path(roundedRect: CGRect(x: left, y: 0, width: width, height: bottom),
+                        cornerRadius: corner)
+        }
 
         var path = Path()
         path.move(to: CGPoint(x: left, y: 0))
@@ -389,17 +347,21 @@ private struct NotchRootView: View {
         let expanded = store.showHoverDetails || store.listExpanded
         let detailHeight = store.listExpanded ? geometry.listDetailHeight : geometry.detailHeight
         let visibleDepth = expanded ? detailHeight : 0
+        let hasActivity = store.heaviestThread != nil
+        let compactWidth = geometry.compactWidth(hasActivity: hasActivity)
+        let rightWidth = geometry.isCapsule && !hasActivity ? 0 : geometry.rightWingWidth
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 QuotaCompactView(store: store)
                     .frame(width: geometry.leftWingWidth, height: geometry.compactHeight)
+                    .offset(x: geometry.isCapsule ? 3 : 0)
                 Color.clear.frame(width: geometry.gapWidth, height: geometry.compactHeight)
                 ThreadCompactView(store: store)
-                    .frame(width: geometry.rightWingWidth, height: geometry.compactHeight)
+                    .frame(width: rightWidth, height: geometry.compactHeight)
             }
-            .frame(width: geometry.compactWidth, height: geometry.compactHeight)
+            .frame(width: compactWidth, height: geometry.compactHeight)
 
-            CenteredDetailView(store: store, height: detailHeight, contentWidth: geometry.compactWidth - 32)
+            CenteredDetailView(store: store, height: detailHeight, contentWidth: geometry.expandedWidth - 32)
                 .frame(width: geometry.expandedWidth, height: detailHeight)
                 .frame(height: visibleDepth, alignment: .top)
                 .clipped()
@@ -410,14 +372,16 @@ private struct NotchRootView: View {
         .foregroundStyle(Visual.primary)
         .background(alignment: .top) {
             NotchSurface(
-                width: geometry.compactWidth,
+                width: expanded ? geometry.expandedWidth : compactWidth,
                 compactHeight: geometry.compactHeight,
-                visibleDepth: visibleDepth
+                visibleDepth: visibleDepth,
+                isCapsule: geometry.isCapsule
             )
             .fill(.black)
             .frame(width: geometry.envelopeWidth, height: geometry.envelopeHeight)
         }
         .animation(.spring(response: 0.42, dampingFraction: 0.84), value: visibleDepth)
+        .animation(.spring(response: 0.42, dampingFraction: 0.84), value: compactWidth)
     }
 }
 

@@ -11,3 +11,17 @@ xcuserdata/
 .env
 .env.*
 !.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+auth.json
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.log
+
+# Release assets are uploaded to GitHub Releases
+*.dmg
+/dist/
