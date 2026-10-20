@@ -41,8 +41,9 @@ Requisitos: macOS 14 ou mais recente e Codex Desktop instalado e autenticado.
 4. Abra o Codex Reset uma vez. O início automático será configurado para este usuário.
 5. O monitor aparece enquanto o Codex Desktop está aberto.
 
-Apple Silicon: visual integrado ao notch.
-Intel: cápsula centralizada, a 5 pixels do topo da tela, com seu tamanho inteiro.
+Macs com notch: visual integrado ao recorte.
+MacBooks Intel e M1 sem notch: cápsula centralizada, a 5 pixels do topo da tela,
+com seu tamanho inteiro e o contorno arredondado visível.
 
 Esta distribuição ainda não tem assinatura Developer ID nem notarização da Apple.
 O macOS pode bloquear a abertura até você autorizar o aplicativo.

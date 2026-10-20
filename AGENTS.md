@@ -3,7 +3,7 @@
 ## Produto e distribuição
 
 - O repositório é público. Cada instalação precisa usar o login, a franquia e os arquivos locais do próprio usuário.
-- Preserve o visual atual no Apple Silicon. A cápsula é específica da versão Intel e deve ficar centralizada, a 5 pixels da borda superior da tela, mantendo o tamanho inteiro e o contorno arredondado visível.
+- Preserve o visual integrado ao recorte nos Macs com notch. Em telas sem notch, incluindo MacBooks Intel e M1, use a cápsula centralizada, a 5 pixels da borda superior da tela, mantendo o tamanho inteiro e o contorno arredondado visível. Detecte o notch pela tela; não limite a cápsula à arquitetura Intel.
 - Não use GitHub Actions, pipelines, serviços ou configurações de CI. O GitHub Actions deve continuar desativado no repositório.
 - Compile e confira os artefatos localmente. Publique atualizações funcionais em GitHub Releases com os dois DMGs, Apple Silicon e Intel, usando scripts/publish-release.sh.
 - Para cada versão, incremente os dois campos de versão em Info.plist e mantenha as notas em releases/vVERSAO.md. Os links de download no README devem continuar apontando para a última Release.

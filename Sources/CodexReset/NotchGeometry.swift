@@ -16,23 +16,17 @@ struct NotchGeometry {
         let left = screen.auxiliaryTopLeftArea?.maxX
         let right = screen.auxiliaryTopRightArea?.minX
         let gap = (left != nil && right != nil) ? max(0, right! - left!) : 0
-        #if arch(x86_64)
-        let isIntel = true
-        #else
-        let isIntel = false
-        #endif
         self.init(screenFrame: screen.frame,
                   menuBarHeight: screen.frame.maxY - screen.visibleFrame.maxY,
                   safeAreaTop: screen.safeAreaInsets.top,
                   notchGap: gap,
-                  notchCenterX: gap > 100 ? (left! + right!) / 2 : nil,
-                  isIntel: isIntel)
+                  notchCenterX: gap > 100 ? (left! + right!) / 2 : nil)
     }
 
     init(screenFrame: CGRect, menuBarHeight: CGFloat, safeAreaTop: CGFloat,
-         notchGap: CGFloat, notchCenterX: CGFloat?, isIntel: Bool) {
+         notchGap: CGFloat, notchCenterX: CGFloat?) {
         self.screenFrame = screenFrame
-        isCapsule = isIntel && notchGap <= 100
+        isCapsule = notchGap <= 100
         centerX = notchCenterX ?? screenFrame.midX
         if isCapsule {
             gapWidth = 0
