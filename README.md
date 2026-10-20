@@ -13,6 +13,24 @@ Sua franquia do Codex sempre à vista. Um monitor nativo para macOS que mostra a
 | **[⬇ Baixar para Apple Silicon](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Apple-Silicon.dmg)** | **[⬇ Baixar para Intel](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Intel.dmg)** |
 | Visual integrado ao notch | Cápsula no topo central, abaixo da barra de menus |
 
+### Depois de instalar: liberar no Terminal
+
+**Após copiar o app para Aplicativos, execute o bloco abaixo no Terminal antes de abrir o Codex Reset.** Esta versão ainda não possui assinatura Developer ID nem notarização da Apple; o macOS pode bloquear a abertura até você autorizar o aplicativo.
+
+O comando encontra o app em **Aplicativos do sistema** ou **Aplicativos do seu usuário** e remove somente a marca de quarentena do Codex Reset:
+
+```sh
+if [ -d "/Applications/Codex Reset.app" ]; then
+  xattr -dr com.apple.quarantine "/Applications/Codex Reset.app"
+elif [ -d "$HOME/Applications/Codex Reset.app" ]; then
+  xattr -dr com.apple.quarantine "$HOME/Applications/Codex Reset.app"
+else
+  echo "Copie primeiro o Codex Reset.app do DMG para a pasta Aplicativos."
+fi
+```
+
+Depois, abra o **Codex Reset** e o **Codex Desktop**. Repita essa etapa ao instalar uma nova versão baixada. Se aparecer um erro de permissão, confira se você tem permissão para alterar a cópia instalada. Veja também as [orientações da Apple para autorizar aplicativos](https://support.apple.com/102445).
+
 Os links sempre apontam para a versão mais recente. Veja as novidades e os downloads anteriores em [Releases](https://github.com/Benfic4rthur/codex-reset/releases). Cada versão inclui os hashes SHA-256 dos DMGs.
 
 **Requisitos:** macOS 14 ou mais recente e Codex Desktop instalado e autenticado na conta de quem vai usar o monitor. O Codex Desktop precisa ser compatível com o Mac. O monitor é um projeto independente, sem vínculo oficial com a OpenAI.
@@ -21,12 +39,11 @@ Os links sempre apontam para a versão mais recente. Veja as novidades e os down
 
 1. Baixe o DMG correspondente ao processador do seu Mac.
 2. Abra o DMG e arraste **Codex Reset.app** para **Aplicativos**.
-3. Abra o Codex Reset uma vez. Ele configura o início automático para seu usuário.
-4. Abra o Codex Desktop. O monitor aparece enquanto ele estiver aberto.
+3. Execute no Terminal o [comando de liberação acima](#depois-de-instalar-liberar-no-terminal).
+4. Abra o Codex Reset uma vez. Ele configura o início automático para seu usuário.
+5. Abra o Codex Desktop. O monitor aparece enquanto ele estiver aberto.
 
 Para atualizar, feche o Codex Reset pelo botão de desligar que aparece ao passar o mouse, substitua o aplicativo e abra a nova versão. As atualizações são baixadas manualmente pelo GitHub.
-
-Esta distribuição ainda **não tem assinatura Developer ID nem notarização da Apple**. O macOS pode pedir autorização na primeira abertura; consulte as [orientações da Apple](https://support.apple.com/102445). Nenhuma configuração global de segurança é alterada pelo aplicativo.
 
 ## Como funciona
 
