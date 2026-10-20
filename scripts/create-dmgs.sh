@@ -37,19 +37,36 @@ Requisitos: macOS 14 ou mais recente e Codex Desktop instalado e autenticado.
 
 1. Arraste Codex Reset.app para a pasta Aplicativos.
 2. Se estiver atualizando, feche o Codex Reset e substitua o aplicativo anterior.
-3. Abra o Codex Reset uma vez. O início automático será configurado para este usuário.
-4. O monitor aparece enquanto o Codex Desktop está aberto.
+3. Execute no Terminal o comando de liberação abaixo antes da primeira abertura.
+4. Abra o Codex Reset uma vez. O início automático será configurado para este usuário.
+5. O monitor aparece enquanto o Codex Desktop está aberto.
 
 Apple Silicon: visual integrado ao notch.
-Intel: cápsula no topo central, abaixo da barra de menus.
+Intel: cápsula centralizada, a 5 pixels do topo da tela, com seu tamanho inteiro.
 
 Esta distribuição ainda não tem assinatura Developer ID nem notarização da Apple.
-O macOS pode exigir autorização na primeira abertura. Consulte:
+O macOS pode bloquear a abertura até você autorizar o aplicativo.
+Após copiar o app para Aplicativos, cole no Terminal:
+
+if [ -d "/Applications/Codex Reset.app" ]; then
+  xattr -dr com.apple.quarantine "/Applications/Codex Reset.app"
+elif [ -d "\$HOME/Applications/Codex Reset.app" ]; then
+  xattr -dr com.apple.quarantine "\$HOME/Applications/Codex Reset.app"
+else
+  echo "Copie primeiro o Codex Reset.app do DMG para a pasta Aplicativos."
+fi
+
+Depois, abra o Codex Reset e o Codex Desktop.
+Repita a liberação ao instalar uma nova versão baixada. Orientações da Apple:
 https://support.apple.com/102445
 
 Downloads e novas versões:
 https://github.com/Benfic4rthur/codex-reset/releases/latest
 TEXT
+    if [[ "$(< "$volume_dir/Leia-me.txt")" == *"$HOME/"* ]]; then
+        print -u2 'As instruções de instalação contêm um caminho pessoal.'
+        exit 1
+    fi
     dmg="$output_dir/Codex-Reset-$variant.dmg"
     hdiutil create -volname "Codex Reset $version $display_name" \
         -srcfolder "$volume_dir" -fs HFS+ -format UDZO -ov "$dmg"

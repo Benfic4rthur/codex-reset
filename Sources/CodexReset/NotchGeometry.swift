@@ -38,7 +38,8 @@ struct NotchGeometry {
             gapWidth = 0
             compactHeight = 34
             rightWingWidth = 140
-            topInset = max(24, menuBarHeight) + 6
+            // Keep the rounded edge visible with a small gap in screen coordinates.
+            topInset = 5
         } else {
             gapWidth = notchGap > 100 ? notchGap : 160
             rightWingWidth = 112

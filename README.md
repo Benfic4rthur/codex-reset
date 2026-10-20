@@ -11,7 +11,7 @@ Sua franquia do Codex sempre à vista. Um monitor nativo para macOS que mostra a
 | Apple Silicon · M1, M2, M3 e posteriores | Intel · x86_64 |
 | :---: | :---: |
 | **[⬇ Baixar para Apple Silicon](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Apple-Silicon.dmg)** | **[⬇ Baixar para Intel](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Intel.dmg)** |
-| Visual integrado ao notch | Cápsula no topo central, abaixo da barra de menus |
+| Visual integrado ao notch | Cápsula centralizada, a 5 pixels do topo da tela |
 
 ### Depois de instalar: liberar no Terminal
 
@@ -52,7 +52,7 @@ Para atualizar, feche o Codex Reset pelo botão de desligar que aparece ao passa
 - **Renovação semanal:** ao passar o mouse, aparece o tempo até a renovação informada pela conta.
 - **Reset extra:** estimativa histórica baseada em [codex-resets.com](https://codex-resets.com/), atualizada a cada 5 minutos. Não representa uma promessa nem um aviso antecipado da OpenAI.
 
-Na versão Intel, a cápsula ocupa apenas o espaço da franquia quando não há atividade e cresce quando há conversas. A versão Apple Silicon mantém o visual junto ao notch.
+Na versão Intel, a cápsula fica centralizada, a 5 pixels da borda superior da tela, logo abaixo da câmera. Essa pequena folga mantém o contorno arredondado e o tamanho inteiro visíveis. Ela ocupa apenas o espaço da franquia quando não há atividade e cresce quando há conversas. A versão Apple Silicon mantém o visual junto ao notch.
 
 ## Privacidade
 
