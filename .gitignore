@@ -1,0 +1,13 @@
+# Swift Package Manager and local builds
+.build/
+.swiftpm/
+
+# macOS and Xcode user files
+.DS_Store
+xcuserdata/
+*.xcuserstate
+
+# Local credentials and environment settings
+.env
+.env.*
+!.env.example
