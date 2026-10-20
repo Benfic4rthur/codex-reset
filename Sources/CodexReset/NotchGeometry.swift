@@ -5,7 +5,7 @@ struct NotchGeometry: Equatable {
     let centerX: CGFloat
     let gapWidth: CGFloat
     let compactHeight: CGFloat
-    let rightWingWidth: CGFloat
+    private(set) var rightWingWidth: CGFloat
     let topInset: CGFloat
     let isCapsule: Bool
     let leftWingWidth: CGFloat
@@ -57,11 +57,23 @@ struct NotchGeometry: Equatable {
     var capsuleQuotaFontSize: CGFloat { min(17, max(1, compactHeight - 4)) }
     var capsuleActivityFontSize: CGFloat { min(13, max(1, compactHeight - 4)) }
 
+    func fittingActivity(_ thread: ActiveThread?, hasDisclosure: Bool) -> Self {
+        guard !isCapsule else { return self }
+        var fitted = self
+        let maximumWidth = min(320, max(1, min(640, screenFrame.width / 2) - leftWingWidth - gapWidth))
+        fitted.rightWingWidth = NotchedActivityLayout.width(for: thread,
+            hasDisclosure: hasDisclosure, maximum: maximumWidth)
+        return fitted
+    }
+
     func compactWidth(hasActivity: Bool) -> CGFloat {
         leftWingWidth + gapWidth + (isCapsule && !hasActivity ? 0 : rightWingWidth)
     }
 
-    var expandedWidth: CGFloat { isCapsule ? max(320, compactWidth(hasActivity: true)) : compactWidth(hasActivity: true) }
+    var expandedWidth: CGFloat {
+        let detailMinimum = isCapsule ? 320 : leftWingWidth + gapWidth + 112
+        return max(detailMinimum, compactWidth(hasActivity: true))
+    }
     var envelopeWidth: CGFloat { expandedWidth + 8 }
     var envelopeHeight: CGFloat { compactHeight + listDetailHeight + 8 }
     var surfaceCenterX: CGFloat {

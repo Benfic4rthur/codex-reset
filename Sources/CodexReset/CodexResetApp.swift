@@ -227,12 +227,14 @@ private final class NotchWindow: NSObject {
     private var pointerTimer: Timer?
     private var menuBarTimer: Timer?
     private var screenObserver: NSObjectProtocol?
+    private var activityObserver: AnyCancellable?
     private var pointerInside = false
 
     init(store: DashboardStore) {
         self.store = store
         let screen = NSScreen.main ?? NSScreen.screens[0]
-        geometry = NotchGeometry(screen: screen)
+        geometry = NotchGeometry(screen: screen).fittingActivity(store.heaviestThread,
+            hasDisclosure: store.rootThreads.count > 1)
         panel = NSPanel(contentRect: geometry.frame, styleMask: [.borderless, .nonactivatingPanel],
                         backing: .buffered, defer: false)
         super.init()
@@ -263,11 +265,15 @@ private final class NotchWindow: NSObject {
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
         ) { [weak self] _ in MainActor.assumeIsolated { self?.refreshScreen() } }
+        activityObserver = store.$activeThreads
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.refreshScreen() }
     }
 
     private func refreshScreen() {
         guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
-        let updated = NotchGeometry(screen: screen)
+        let updated = NotchGeometry(screen: screen).fittingActivity(store.heaviestThread,
+            hasDisclosure: store.rootThreads.count > 1)
         guard geometry != updated else { return }
         geometry = updated
         panel.setFrame(geometry.frame, display: true)
@@ -294,6 +300,7 @@ private final class NotchWindow: NSObject {
     func stop() {
         pointerTimer?.invalidate()
         menuBarTimer?.invalidate()
+        activityObserver?.cancel()
         if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
         panel.close()
     }
@@ -390,7 +397,7 @@ private struct NotchRootView: View {
             .frame(width: geometry.envelopeWidth, height: geometry.envelopeHeight)
         }
         .animation(.spring(response: 0.42, dampingFraction: 0.84), value: visibleDepth)
-        .animation(.spring(response: 0.42, dampingFraction: 0.84), value: compactWidth)
+        .animation(geometry.isCapsule ? .spring(response: 0.42, dampingFraction: 0.84) : nil, value: compactWidth)
     }
 }
 
@@ -531,7 +538,7 @@ private struct ThreadCompactView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.leading, 6)
-        .padding(.trailing, 4)
+        .padding(.trailing, 8)
     }
 
     private func disclosureButton(height: CGFloat) -> some View {
@@ -695,7 +702,7 @@ private extension View {
     }
 }
 
-private enum Format {
+enum Format {
     static func model(_ value: String) -> String {
         let pieces = value.split(separator: "-").map(String.init)
         guard pieces.count > 1, pieces[0].lowercased() == "gpt" else { return value }
