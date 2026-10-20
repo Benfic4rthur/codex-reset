@@ -46,8 +46,9 @@ MacBooks Intel e M1 sem notch: cápsula compacta inteira dentro da barra de menu
 com porcentagem grande e uma barra horizontal de progresso separada. A altura é
 medida pelo macOS na própria tela, com uma pequena margem para o contorno.
 Projeto, modelo e esforço aparecem em uma linha quando há atividade.
-As contagens do reset semanal e da janela estimada de reset extra diminuem
-em horas e minutos. Uma janela extra encerrada aguarda novos dados.
+O reset semanal mostra dias e horas; nas últimas 24 horas, mostra horas e minutos.
+O reset extra indica a faixa com "Entre ... e ..." e "Estimativa histórica".
+Uma janela extra encerrada aguarda novos dados.
 
 Esta distribuição ainda não tem assinatura Developer ID nem notarização da Apple.
 O macOS pode bloquear a abertura até você autorizar o aplicativo.

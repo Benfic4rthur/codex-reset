@@ -9,8 +9,8 @@ struct NotchGeometry: Equatable {
     let topInset: CGFloat
     let isCapsule: Bool
     let leftWingWidth: CGFloat
-    let detailHeight: CGFloat = 70
-    let listDetailHeight: CGFloat = 102
+    let detailHeight: CGFloat = 82
+    let listDetailHeight: CGFloat = 134
 
     init(screen: NSScreen) {
         let left = screen.auxiliaryTopLeftArea?.maxX

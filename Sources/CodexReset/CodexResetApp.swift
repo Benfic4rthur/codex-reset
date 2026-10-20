@@ -558,13 +558,15 @@ private struct CenteredDetailView: View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             VStack(spacing: 0) {
                 HStack(alignment: .top, spacing: 0) {
-                    VStack(spacing: 2) {
+                    VStack(spacing: 3) {
                         Text("RESET EXTRA").detailHeading()
                         Text(extraHeadline(at: context.date))
-                            .font(.system(size: 11.5, weight: .semibold))
-                            .lineLimit(1)
+                            .font(.system(size: 12, weight: .semibold))
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(height: 32)
                         Text(extraCaption(at: context.date))
-                            .font(.system(size: 9))
+                            .font(.system(size: 10))
                             .foregroundStyle(Visual.secondary)
                             .lineLimit(1)
                     }
@@ -572,17 +574,21 @@ private struct CenteredDetailView: View {
 
                     Rectangle()
                         .fill(.white.opacity(0.18))
-                        .frame(width: 1, height: 38)
+                        .frame(width: 1, height: 54)
                         .padding(.horizontal, 13)
                         .padding(.top, 2)
 
-                    VStack(spacing: 2) {
+                    VStack(spacing: 3) {
                         Text("RESET SEMANAL").detailHeading()
                         Text(weeklyHeadline(at: context.date))
-                            .font(.system(size: 11.5, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold))
+                            .lineLimit(2)
+                            .frame(height: 32)
+                        Text("Informado pelo Codex")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Visual.secondary)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 6)
                 }
                 .frame(width: contentWidth)
                 .padding(.top, 12)
@@ -650,10 +656,9 @@ private struct CenteredDetailView: View {
             return "Reset extra anunciado"
         }
         if let window = forecast.estimatedWindow {
-            let countdown = window.countdown(at: now)
-            return now >= window.endsAt ? countdown : "≈ \(countdown)"
+            return window.presentation(at: now).headline
         }
-        return "Sem previsão confiável"
+        return "Sem estimativa"
     }
 
     private func extraCaption(at now: Date) -> String {
@@ -665,13 +670,9 @@ private struct CenteredDetailView: View {
             return "Anúncio verificado na fonte"
         }
         if let window = forecast.estimatedWindow {
-            if now >= window.endsAt { return "Aguardando novos dados" }
-            if now >= window.startsAt { return "Dentro da janela estimada" }
+            return window.presentation(at: now).caption
         }
-        guard let chance = forecast.probabilityNext7Days else {
-            return forecast.estimatedWindow == nil ? "Histórico insuficiente para estimar" : "Janela histórica estimada"
-        }
-        return "Histórico: \(Int((chance * 100).rounded()))% em 7d"
+        return "Histórico insuficiente"
     }
 
     private func weeklyHeadline(at now: Date) -> String {

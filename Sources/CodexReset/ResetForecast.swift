@@ -4,8 +4,11 @@ enum ResetCountdown {
     static func remaining(until deadline: Date, at now: Date) -> String? {
         let seconds = deadline.timeIntervalSince(now)
         guard seconds > 0 else { return nil }
-        let minutes = Int(ceil(seconds / 60))
+        let minutes = max(1, Int(seconds / 60))
         let hours = minutes / 60
+        if hours >= 24 {
+            return "\(hours / 24)d \(hours % 24)h"
+        }
         let remainder = minutes % 60
         return hours > 0 ? "\(hours)h \(String(format: "%02d", remainder))m" : "\(remainder)m"
     }
@@ -15,14 +18,14 @@ struct EstimatedResetWindow: Sendable {
     let startsAt: Date
     let endsAt: Date
 
-    func countdown(at now: Date) -> String {
+    func presentation(at now: Date) -> (headline: String, caption: String) {
         guard let end = ResetCountdown.remaining(until: endsAt, at: now) else {
-            return "Janela encerrada"
+            return ("Janela encerrada", "Aguardando novos dados")
         }
         guard let start = ResetCountdown.remaining(until: startsAt, at: now) else {
-            return "Até \(end)"
+            return ("Dentro da janela", "Estimativa: até \(end)")
         }
-        return "\(start)–\(end)"
+        return ("Entre \(start)\ne \(end)", "Estimativa histórica")
     }
 }
 

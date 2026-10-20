@@ -8,9 +8,10 @@ final class ResetCountdownTests: XCTestCase {
         let intervals = Array(repeating: 36.0 * 3_600, count: 12)
             + Array(repeating: 96.0 * 3_600, count: 12)
         let window = try XCTUnwrap(ResetForecastService.estimatedWindow(since: anchor, intervals: intervals))
-        XCTAssertEqual(window.countdown(at: anchor), "36h 00m–96h 00m")
-        XCTAssertEqual(window.countdown(at: anchor.addingTimeInterval(2 * 3_600)), "34h 00m–94h 00m")
-        XCTAssertEqual(window.countdown(at: anchor.addingTimeInterval(2 * 3_600 + 60)), "33h 59m–93h 59m")
+        XCTAssertEqual(window.presentation(at: anchor).headline, "Entre 1d 12h\ne 4d 0h")
+        XCTAssertEqual(window.presentation(at: anchor).caption, "Estimativa histórica")
+        XCTAssertEqual(window.presentation(at: anchor.addingTimeInterval(2 * 3_600)).headline, "Entre 1d 10h\ne 3d 22h")
+        XCTAssertEqual(window.presentation(at: anchor.addingTimeInterval(2 * 3_600 + 60)).headline, "Entre 1d 9h\ne 3d 21h")
         let refreshed = try XCTUnwrap(ResetForecastService.estimatedWindow(since: anchor, intervals: intervals))
         XCTAssertEqual(refreshed.startsAt, window.startsAt)
         XCTAssertEqual(refreshed.endsAt, window.endsAt)
@@ -19,16 +20,30 @@ final class ResetCountdownTests: XCTestCase {
     func testWindowExpiresWithoutMovingForward() {
         let window = EstimatedResetWindow(startsAt: anchor.addingTimeInterval(3_600),
                                          endsAt: anchor.addingTimeInterval(7_200))
-        XCTAssertEqual(window.countdown(at: anchor.addingTimeInterval(3_600)), "Até 1h 00m")
-        XCTAssertEqual(window.countdown(at: anchor.addingTimeInterval(7_200)), "Janela encerrada")
-        XCTAssertEqual(window.countdown(at: anchor.addingTimeInterval(9_000)), "Janela encerrada")
+        XCTAssertEqual(window.presentation(at: anchor.addingTimeInterval(3_600)).headline, "Dentro da janela")
+        XCTAssertEqual(window.presentation(at: anchor.addingTimeInterval(3_600)).caption, "Estimativa: até 1h 00m")
+        XCTAssertEqual(window.presentation(at: anchor.addingTimeInterval(7_200)).headline, "Janela encerrada")
+        XCTAssertEqual(window.presentation(at: anchor.addingTimeInterval(9_000)).caption, "Aguardando novos dados")
     }
 
-    func testWeeklyCountdownKeepsMinutePrecisionAcrossDays() {
-        let deadline = anchor.addingTimeInterval(73 * 3_600 + 12 * 60)
-        XCTAssertEqual(ResetCountdown.remaining(until: deadline, at: anchor), "73h 12m")
-        XCTAssertEqual(ResetCountdown.remaining(until: deadline, at: anchor.addingTimeInterval(60)), "73h 11m")
+    func testWeeklyCountdownUsesDaysAndHoursUntilLastDay() {
+        let deadline = anchor.addingTimeInterval(162 * 3_600)
+        XCTAssertEqual(ResetCountdown.remaining(until: deadline, at: anchor), "6d 18h")
+        XCTAssertEqual(ResetCountdown.remaining(until: deadline, at: anchor.addingTimeInterval(3_600)), "6d 17h")
         XCTAssertNil(ResetCountdown.remaining(until: deadline, at: deadline))
+    }
+
+    func testCountdownChangesUnitsAtOneDayAndKeepsFinalMinutes() {
+        let cases: [(TimeInterval, String)] = [
+            (48 * 3_600, "2d 0h"), (24 * 3_600 + 59 * 60, "1d 0h"),
+            (24 * 3_600, "1d 0h"), (24 * 3_600 - 1, "23h 59m"),
+            (18 * 3_600 + 30 * 60, "18h 30m"), (3_600, "1h 00m"),
+            (59 * 60, "59m"), (59, "1m"), (1, "1m")
+        ]
+        for (seconds, expected) in cases {
+            XCTAssertEqual(ResetCountdown.remaining(until: anchor.addingTimeInterval(seconds), at: anchor), expected)
+        }
+        XCTAssertNil(ResetCountdown.remaining(until: anchor.addingTimeInterval(-1), at: anchor))
     }
 
     func testInsufficientHistoryDoesNotCreateAnEstimate() {
