@@ -9,6 +9,7 @@
 - Compile e confira os artefatos localmente. Publique atualizações funcionais em GitHub Releases com os dois DMGs, Apple Silicon e Intel, usando scripts/publish-release.sh.
 - Para cada versão, incremente os dois campos de versão em Info.plist e mantenha as notas em releases/vVERSAO.md. Os links de download no README devem continuar apontando para a última Release.
 - A versão atual deve ficar destacada acima dos downloads e nos dois botões do README. Após publicar, scripts/publish-release.sh confirma a última Release e atualiza esse bloco automaticamente com scripts/update-downloads.py, enviando o commit ao GitHub. Preserve os marcadores do bloco e não anuncie uma versão antes de publicar seus dois DMGs.
+- Cruze anúncios de reset vencidos com a renovação observada na franquia semanal da conta. Ao identificar a renovação, encerre o aviso antigo, consulte a fonte e recalcule a janela ancorada no reset observado, usando somente os intervalos do site. Porcentagem alta sozinha não confirma reset; consultas repetidas não podem reiniciar a contagem nem restaurar o anúncio antigo.
 - Não sobrescreva uma versão publicada; publique uma versão nova.
 
 ## Privacidade

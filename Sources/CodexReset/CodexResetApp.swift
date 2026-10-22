@@ -83,6 +83,15 @@ final class DashboardStore: ObservableObject {
     private var hoverWork: DispatchWorkItem?
     private var threadsInFlight = false
     private var usageInFlight = false
+    private var sourceForecast: ResetForecast?
+    private var observedQuotaReset: Date?
+    private let forecastLoader: @Sendable () async throws -> ResetForecast
+
+    init(forecastLoader: @escaping @Sendable () async throws -> ResetForecast = {
+        try await ResetForecastService.fetch()
+    }) {
+        self.forecastLoader = forecastLoader
+    }
 
     func start() {
         refreshThreads()
@@ -153,8 +162,7 @@ final class DashboardStore: ObservableObject {
                 self.usageInFlight = false
                 switch result {
                 case .success(let snapshot):
-                    self.usage = snapshot
-                    self.usageError = nil
+                    self.receiveUsage(snapshot)
                 case .failure(let error):
                     self.usageError = error.localizedDescription
                 }
@@ -162,16 +170,38 @@ final class DashboardStore: ObservableObject {
         }
     }
 
-    func refreshForecast(using fetch: @escaping @Sendable () async throws -> ResetForecast = {
-        try await ResetForecastService.fetch()
-    }) {
+    func receiveUsage(_ snapshot: UsageSnapshot) {
+        let observed = QuotaResetObservation.detectedAt(previous: usage, current: snapshot, forecast: sourceForecast)
+        usage = snapshot
+        usageError = nil
+        if recordQuotaReset(observed) {
+            forecast = sourceForecast?.reconcilingQuotaReset(at: observedQuotaReset)
+            refreshForecast()
+        }
+    }
+
+    private func recordQuotaReset(_ date: Date?) -> Bool {
+        let latest = max(observedQuotaReset ?? .distantPast, sourceForecast?.latest ?? .distantPast)
+        guard let date, date > latest else { return false }
+        observedQuotaReset = date
+        return true
+    }
+
+    func refreshForecast(using fetch: (@Sendable () async throws -> ResetForecast)? = nil) {
         guard !isRefreshingForecast else { return }
         isRefreshingForecast = true
+        let load = fetch ?? forecastLoader
         Task { @MainActor [weak self] in
             guard let self else { return }
             defer { self.isRefreshingForecast = false }
             do {
-                self.forecast = try await fetch()
+                let source = try await load()
+                self.sourceForecast = source
+                if let usage = self.usage {
+                    _ = self.recordQuotaReset(QuotaResetObservation.detectedAt(
+                        previous: nil, current: usage, forecast: source))
+                }
+                self.forecast = source.reconcilingQuotaReset(at: self.observedQuotaReset)
                 self.forecastError = nil
             } catch {
                 self.forecastError = error.localizedDescription
@@ -692,33 +722,14 @@ private struct CenteredDetailView: View {
         guard let forecast = store.forecast else {
             return store.isRefreshingForecast || store.forecastError == nil ? "Buscando previsão…" : "Previsão indisponível"
         }
-        if let announcement = forecast.scheduledReset {
-            if let date = announcement.scheduledFor {
-                if let countdown = ResetCountdown.remaining(until: date, at: now) {
-                    return "Em \(countdown)"
-                }
-                return "Horário anunciado passou"
-            }
-            return "Reset extra anunciado"
-        }
-        if let window = forecast.estimatedWindow {
-            return window.presentation(at: now, isSmallSample: forecast.hasSmallSample).headline
-        }
-        return "Sem estimativa"
+        return forecast.presentation(at: now).headline
     }
 
     private func extraCaption(at now: Date) -> String {
         guard let forecast = store.forecast else {
             return store.isRefreshingForecast || store.forecastError == nil ? "Histórico em atualização" : "Fonte indisponível"
         }
-        if let announcement = forecast.scheduledReset {
-            if let date = announcement.scheduledFor, date <= now { return "Aguardando confirmação" }
-            return "Anúncio verificado na fonte"
-        }
-        if let window = forecast.estimatedWindow {
-            return window.presentation(at: now, isSmallSample: forecast.hasSmallSample).caption
-        }
-        return "Histórico insuficiente"
+        return forecast.presentation(at: now).caption
     }
 
     private func weeklyHeadline(at now: Date) -> String {

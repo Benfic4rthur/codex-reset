@@ -13,7 +13,7 @@ Os dados apresentados ficam em memória. Os bancos consultados não são modific
 ## Conexões
 
 - O processo local do Codex faz as consultas à OpenAI usando a própria sessão do usuário, conforme o funcionamento do Codex.
-- O monitor consulta a API pública de `codex-resets.com` na abertura e a cada duas horas para obter o histórico de resets. O cálculo usa somente os últimos 30 dias; a contagem regressiva é atualizada localmente, sem consultar a fonte a cada minuto. Essa consulta não inclui login, chaves, franquia ou conversas do usuário. Como em qualquer conexão HTTPS, o serviço de destino recebe os dados normais da conexão, como o endereço IP.
+- O monitor consulta a API pública de `codex-resets.com` na abertura, a cada duas horas, pelo botão de atualizar e ao detectar uma renovação extraordinária da franquia para obter o histórico de resets. O cálculo usa somente os últimos 30 dias; a contagem regressiva é atualizada localmente, sem consultar a fonte a cada minuto. A renovação observada na conta serve apenas de referência para a próxima janela estimada; não é enviada ao site nem adicionada à amostra pública. Essa consulta não inclui login, chaves, franquia ou conversas do usuário. Como em qualquer conexão HTTPS, o serviço de destino recebe os dados normais da conexão, como o endereço IP.
 - Não há telemetria, anúncios ou mecanismo próprio de atualização. Downloads de novas versões são feitos manualmente pelo GitHub Releases.
 
 ## Arquivos instalados

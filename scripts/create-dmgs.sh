@@ -53,6 +53,9 @@ O botão de atualizar nos detalhes, abaixo da porcentagem, consulta a fonte na h
 Com seis a onze intervalos, a estimativa é identificada como amostra pequena.
 A contagem regressiva atualiza localmente a cada minuto, sem consultar o site.
 Uma janela extra encerrada aguarda novos dados.
+Ao observar uma renovação da franquia, o app encerra o anúncio vencido,
+consulta a fonte e recalcula a próxima janela com os intervalos históricos do site.
+Porcentagem alta sozinha não confirma reset. Consultas repetidas não reiniciam o prazo.
 
 Esta distribuição ainda não tem assinatura Developer ID nem notarização da Apple.
 O macOS pode bloquear a abertura até você autorizar o aplicativo.

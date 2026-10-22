@@ -43,7 +43,7 @@ struct ScheduledResetAnnouncement: Sendable {
 }
 
 struct ResetForecast: Sendable {
-    /// Latest observed extraordinary reset applied to usage limits.
+    /// Latest reset observed by the source or in this account.
     let latest: Date
 
     /// Historical estimate in 0...1 for an extra reset within seven days.
@@ -60,6 +60,37 @@ struct ResetForecast: Sendable {
     let fetchedAt: Date
     let scheduledReset: ScheduledResetAnnouncement?
     let sourceURL: URL
+    /// Source intervals only; a personal renewal never changes the sample.
+    var historicalIntervals: [TimeInterval] = []
+
+    func reconcilingQuotaReset(at observedAt: Date?) -> ResetForecast {
+        let anchor = max(latest, observedAt ?? latest)
+        let pending = scheduledReset.flatMap { announcement in
+            announcement.resetType != "regular" || (announcement.scheduledFor ?? announcement.announcedAt) > anchor
+                ? announcement : nil
+        }
+        return ResetForecast(latest: anchor, probabilityNext7Days: probabilityNext7Days,
+            estimatedWindow: anchor == latest ? estimatedWindow
+                : ResetForecastService.estimatedWindow(since: anchor, intervals: historicalIntervals),
+            sampleSize: sampleSize, fetchedAt: fetchedAt, scheduledReset: pending,
+            sourceURL: sourceURL, historicalIntervals: historicalIntervals)
+    }
+
+    func presentation(at now: Date) -> (headline: String, caption: String) {
+        if let announcement = scheduledReset {
+            if let date = announcement.scheduledFor {
+                if let countdown = ResetCountdown.remaining(until: date, at: now) {
+                    return ("Em \(countdown)", "Anúncio verificado na fonte")
+                }
+                return ("Horário anunciado passou", "Aguardando confirmação")
+            }
+            return ("Reset extra anunciado", "Anúncio verificado na fonte")
+        }
+        if let window = estimatedWindow {
+            return window.presentation(at: now, isSmallSample: hasSmallSample)
+        }
+        return ("Sem estimativa", "Histórico insuficiente")
+    }
 }
 
 enum ResetForecastError: LocalizedError {
@@ -134,7 +165,8 @@ enum ResetForecastService {
             sampleSize: gaps.count,
             fetchedAt: status.meta.generatedAt,
             scheduledReset: verifiedAnnouncement(status.data.scheduledReset),
-            sourceURL: sourceURL
+            sourceURL: sourceURL,
+            historicalIntervals: gaps
         )
     }
 
