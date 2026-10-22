@@ -94,7 +94,7 @@ final class DashboardStore: ObservableObject {
         usageTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshUsage() }
         }
-        forecastTimer = Timer.scheduledTimer(withTimeInterval: 5 * 60, repeats: true) { [weak self] _ in
+        forecastTimer = Timer.scheduledTimer(withTimeInterval: ResetForecastService.refreshInterval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshForecast() }
         }
     }
@@ -672,7 +672,7 @@ private struct CenteredDetailView: View {
             return "Reset extra anunciado"
         }
         if let window = forecast.estimatedWindow {
-            return window.presentation(at: now).headline
+            return window.presentation(at: now, isSmallSample: forecast.hasSmallSample).headline
         }
         return "Sem estimativa"
     }
@@ -686,7 +686,7 @@ private struct CenteredDetailView: View {
             return "Anúncio verificado na fonte"
         }
         if let window = forecast.estimatedWindow {
-            return window.presentation(at: now).caption
+            return window.presentation(at: now, isSmallSample: forecast.hasSmallSample).caption
         }
         return "Histórico insuficiente"
     }

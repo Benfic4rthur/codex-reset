@@ -48,6 +48,35 @@ final class ResetCountdownTests: XCTestCase {
 
     func testInsufficientHistoryDoesNotCreateAnEstimate() {
         XCTAssertNil(ResetForecastService.estimatedWindow(since: anchor,
-            intervals: Array(repeating: 86_400, count: 11)))
+            intervals: Array(repeating: 86_400, count: 5)))
+    }
+
+    func testOldResetsNeverInfluenceTheThirtyDayEstimate() throws {
+        let recent = (0...12).map { anchor.addingTimeInterval(-Double($0) * 86_400) }
+        let old = [31.0, 45, 60, 90].map { anchor.addingTimeInterval(-$0 * 86_400) }
+        let future = [anchor.addingTimeInterval(86_400)]
+        let intervals = ResetForecastService.recentIntervals(from: old + recent + future, at: anchor)
+        XCTAssertEqual(intervals.count, 12)
+        XCTAssertTrue(intervals.allSatisfy { $0 == 86_400 })
+        let estimate = try XCTUnwrap(ResetForecastService.estimatedWindow(since: anchor, intervals: intervals))
+        XCTAssertEqual(estimate.startsAt, anchor.addingTimeInterval(86_400))
+        XCTAssertEqual(estimate.endsAt, anchor.addingTimeInterval(86_400))
+    }
+
+    func testThirtyDayBoundaryDoesNotIncludeAnOlderEndpoint() {
+        let cutoff = anchor.addingTimeInterval(-30 * 86_400)
+        let intervals = ResetForecastService.recentIntervals(from: [cutoff.addingTimeInterval(-1), cutoff,
+            cutoff.addingTimeInterval(86_400), anchor], at: anchor)
+        XCTAssertEqual(intervals, [86_400, 29 * 86_400])
+    }
+
+    func testSixIntervalsAllowAnEstimateWithSmallSampleNotice() throws {
+        let window = try XCTUnwrap(ResetForecastService.estimatedWindow(since: anchor,
+            intervals: Array(repeating: 86_400, count: 6)))
+        XCTAssertEqual(window.presentation(at: anchor, isSmallSample: true).caption, "Estimativa · poucos dados")
+        let during = EstimatedResetWindow(startsAt: anchor.addingTimeInterval(-3_600),
+            endsAt: anchor.addingTimeInterval(7_200))
+        XCTAssertEqual(during.presentation(at: anchor, isSmallSample: true).headline, "Dentro da janela\nAté 2h 00m")
+        XCTAssertEqual(during.presentation(at: anchor, isSmallSample: true).caption, "Estimativa · poucos dados")
     }
 }
