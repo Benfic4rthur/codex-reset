@@ -44,4 +44,10 @@ expected_names="$(printf '%s\n' Codex-Reset-Apple-Silicon.dmg Codex-Reset-Intel.
     exit 1
 }
 gh release edit "$tag" --repo "$repository" --draft=false --latest
+python3 "$project_dir/scripts/update-downloads.py" --repository "$repository" --expected-version "$version"
+if ! git diff --quiet -- README.md; then
+    git add README.md
+    git commit -m "docs: show $version as the current download version"
+    git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push origin HEAD
+fi
 gh release view "$tag" --repo "$repository" --json url --jq '.url'

@@ -8,10 +8,16 @@ Sua franquia do Codex sempre à vista. Um monitor nativo para macOS que mostra a
 
 ## Downloads
 
+<!-- latest-release:start -->
+### Versão atual: [0.1.14](https://github.com/Benfic4rthur/codex-reset/releases/tag/v0.1.14)
+
+Os dois downloads abaixo são da **versão 0.1.14**. [Ver novidades desta versão](https://github.com/Benfic4rthur/codex-reset/releases/tag/v0.1.14).
+
 | Apple Silicon · M1, M2, M3 e posteriores | Intel · x86_64 |
 | :---: | :---: |
-| **[⬇ Baixar para Apple Silicon](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Apple-Silicon.dmg)** | **[⬇ Baixar para Intel](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Intel.dmg)** |
+| **[⬇ Baixar Apple Silicon · 0.1.14](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Apple-Silicon.dmg)** | **[⬇ Baixar Intel · 0.1.14](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Intel.dmg)** |
 | Com notch: visual integrado ao recorte. Sem notch, incluindo M1: cápsula no topo | Cápsula compacta dentro da barra de menus |
+<!-- latest-release:end -->
 
 ### Depois de instalar: liberar no Terminal
 
@@ -96,7 +102,7 @@ A publicação acontece no Mac do desenvolvedor, usando o GitHub CLI autenticado
 ./scripts/publish-release.sh
 ```
 
-O comando compila as duas arquiteturas, monta e confere os DMGs, gera os hashes e publica os arquivos em uma nova Release, marcada como a mais recente. Os links de download acima passam a apontar para ela automaticamente. O histórico de versões permanece disponível.
+O comando compila as duas arquiteturas, monta e confere os DMGs, gera os hashes e publica os arquivos em uma nova Release, marcada como a mais recente. Depois confirma a versão publicada e atualiza automaticamente o número destacado e os botões de download neste README, com um commit enviado ao repositório. Os links de download acima passam a apontar para ela automaticamente. O histórico de versões permanece disponível.
 
 Para gerar somente os DMGs, sem publicar:
 
