@@ -3,6 +3,25 @@ import XCTest
 @testable import CodexReset
 
 final class NotchGeometryTests: XCTestCase {
+    func testRefreshStaysBelowQuotaWhenActivityChangesWidth() {
+        for gap: CGFloat in [0, 180] {
+            let base = NotchGeometry(screenFrame: CGRect(x: 0, y: 0, width: 1440, height: 900),
+                menuBarHeight: 38, safeAreaTop: gap == 0 ? 0 : 38,
+                notchGap: gap, notchCenterX: gap == 0 ? nil : 720)
+            for geometry in [base, base.fittingActivity(nil, hasDisclosure: false)] {
+                for hasActivity in [true, false] {
+                    let detailLeft = (geometry.envelopeWidth - geometry.expandedWidth) / 2
+                    let compactLeft = (geometry.envelopeWidth - geometry.compactWidth(hasActivity: hasActivity)) / 2
+                    let quotaOffset = geometry.isCapsule ? geometry.leftWingWidth / 2
+                        : geometry.leftWingWidth - 12 - geometry.quotaDiameter / 2
+                    XCTAssertEqual(detailLeft + geometry.quotaCenterXInDetails(hasActivity: hasActivity),
+                        compactLeft + quotaOffset, accuracy: 0.001)
+                    XCTAssertGreaterThanOrEqual(geometry.quotaCenterXInDetails(hasActivity: hasActivity) - 14, 0)
+                }
+            }
+        }
+    }
+
     func testCapsuleKeepsReadablePercentageInsideMenuBar() {
         let frame = CGRect(x: 0, y: 0, width: 1440, height: 900)
         for barHeight: CGFloat in [18, 20, 22, 24, 28, 36, 48, 64] {

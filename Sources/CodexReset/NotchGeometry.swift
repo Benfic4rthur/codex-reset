@@ -9,8 +9,8 @@ struct NotchGeometry: Equatable {
     let topInset: CGFloat
     let isCapsule: Bool
     let leftWingWidth: CGFloat
-    let detailHeight: CGFloat = 82
-    let listDetailHeight: CGFloat = 134
+    let detailHeight: CGFloat = 102
+    let listDetailHeight: CGFloat = 154
 
     init(screen: NSScreen) {
         let left = screen.auxiliaryTopLeftArea?.maxX
@@ -68,6 +68,11 @@ struct NotchGeometry: Equatable {
 
     func compactWidth(hasActivity: Bool) -> CGFloat {
         leftWingWidth + gapWidth + (isCapsule && !hasActivity ? 0 : rightWingWidth)
+    }
+
+    func quotaCenterXInDetails(hasActivity: Bool) -> CGFloat {
+        let quotaOffset = isCapsule ? leftWingWidth / 2 : leftWingWidth - 12 - quotaDiameter / 2
+        return (expandedWidth - compactWidth(hasActivity: hasActivity)) / 2 + quotaOffset
     }
 
     var expandedWidth: CGFloat {

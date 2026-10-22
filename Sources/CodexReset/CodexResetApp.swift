@@ -67,6 +67,7 @@ final class DashboardStore: ObservableObject {
     @Published private(set) var threadsError: String?
     @Published private(set) var forecast: ResetForecast?
     @Published private(set) var forecastError: String?
+    @Published private(set) var isRefreshingForecast = false
     @Published var listExpanded = false
     @Published var showHoverDetails = false
 
@@ -82,7 +83,6 @@ final class DashboardStore: ObservableObject {
     private var hoverWork: DispatchWorkItem?
     private var threadsInFlight = false
     private var usageInFlight = false
-    private var forecastInFlight = false
 
     func start() {
         refreshThreads()
@@ -162,14 +162,16 @@ final class DashboardStore: ObservableObject {
         }
     }
 
-    func refreshForecast() {
-        guard !forecastInFlight else { return }
-        forecastInFlight = true
+    func refreshForecast(using fetch: @escaping @Sendable () async throws -> ResetForecast = {
+        try await ResetForecastService.fetch()
+    }) {
+        guard !isRefreshingForecast else { return }
+        isRefreshingForecast = true
         Task { @MainActor [weak self] in
             guard let self else { return }
-            defer { self.forecastInFlight = false }
+            defer { self.isRefreshingForecast = false }
             do {
-                self.forecast = try await ResetForecastService.fetch()
+                self.forecast = try await fetch()
                 self.forecastError = nil
             } catch {
                 self.forecastError = error.localizedDescription
@@ -384,7 +386,8 @@ private struct NotchRootView: View {
             }
             .frame(width: compactWidth, height: geometry.compactHeight)
 
-            CenteredDetailView(store: store, height: detailHeight, contentWidth: geometry.expandedWidth - 32)
+            CenteredDetailView(store: store, height: detailHeight, contentWidth: geometry.expandedWidth - 32,
+                refreshButtonX: geometry.quotaCenterXInDetails(hasActivity: hasActivity))
                 .frame(width: geometry.expandedWidth, height: detailHeight)
                 .frame(height: visibleDepth, alignment: .top)
                 .clipped()
@@ -568,6 +571,7 @@ private struct CenteredDetailView: View {
     @ObservedObject var store: DashboardStore
     let height: CGFloat
     let contentWidth: CGFloat
+    let refreshButtonX: CGFloat
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
@@ -606,7 +610,7 @@ private struct CenteredDetailView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .frame(width: contentWidth)
-                .padding(.top, 12)
+                .padding(.top, 32)
 
                 if store.listExpanded && store.rootThreads.count > 1 {
                     VStack(spacing: 3) {
@@ -641,6 +645,10 @@ private struct CenteredDetailView: View {
             .frame(maxWidth: .infinity)
             .frame(height: height, alignment: .top)
             .multilineTextAlignment(.center)
+            .overlay(alignment: .topLeading) {
+                forecastRefreshButton
+                    .offset(x: refreshButtonX - 14, y: 2)
+            }
             .overlay(alignment: .top) {
                 Button { NSApp.terminate(nil) } label: {
                     Image(systemName: "power")
@@ -658,9 +666,31 @@ private struct CenteredDetailView: View {
         }
     }
 
+    private var forecastRefreshButton: some View {
+        Button { store.refreshForecast() } label: {
+            ZStack {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 10, weight: .semibold))
+                    .opacity(store.isRefreshingForecast ? 0 : 1)
+                if store.isRefreshingForecast {
+                    ProgressView().controlSize(.mini)
+                }
+            }
+            .frame(width: 28, height: 28)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Visual.accent)
+        .disabled(store.isRefreshingForecast)
+        .accessibilityLabel(store.isRefreshingForecast ? "Atualizando previsão" : "Atualizar previsão do reset extra")
+        .help(store.forecastError.map { "Falha na última consulta: \($0) Clique para tentar novamente." }
+            ?? "Consultar agora a previsão do reset extra")
+        .modifier(PointingHandCursor())
+    }
+
     private func extraHeadline(at now: Date) -> String {
         guard let forecast = store.forecast else {
-            return store.forecastError == nil ? "Buscando previsão…" : "Previsão indisponível"
+            return store.isRefreshingForecast || store.forecastError == nil ? "Buscando previsão…" : "Previsão indisponível"
         }
         if let announcement = forecast.scheduledReset {
             if let date = announcement.scheduledFor {
@@ -679,7 +709,7 @@ private struct CenteredDetailView: View {
 
     private func extraCaption(at now: Date) -> String {
         guard let forecast = store.forecast else {
-            return store.forecastError == nil ? "Histórico em atualização" : "Fonte indisponível"
+            return store.isRefreshingForecast || store.forecastError == nil ? "Histórico em atualização" : "Fonte indisponível"
         }
         if let announcement = forecast.scheduledReset {
             if let date = announcement.scheduledFor, date <= now { return "Aguardando confirmação" }

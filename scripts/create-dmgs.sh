@@ -49,6 +49,7 @@ Projeto, modelo e esforço aparecem em uma linha quando há atividade.
 O reset semanal mostra dias e horas; nas últimas 24 horas, mostra horas e minutos.
 O reset extra indica a faixa com "Entre ... e ..." e "Estimativa histórica".
 O histórico usa somente os últimos 30 dias e é consultado ao abrir e a cada duas horas.
+O botão de atualizar nos detalhes, abaixo da porcentagem, consulta a fonte na hora.
 Com seis a onze intervalos, a estimativa é identificada como amostra pequena.
 A contagem regressiva atualiza localmente a cada minuto, sem consultar o site.
 Uma janela extra encerrada aguarda novos dados.

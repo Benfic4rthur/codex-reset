@@ -7,7 +7,7 @@ final class NotchSurfaceTests: XCTestCase {
         let rect = CGRect(x: 0, y: 0, width: 400, height: 180)
         let closed = NotchSurface(width: 350, compactWidth: 350, compactHeight: 36,
             visibleDepth: 0, isCapsule: false).path(in: rect)
-        for depth: CGFloat in [1, 20, 82, 134] {
+        for depth: CGFloat in [1, 20, 102, 154] {
             let opened = NotchSurface(width: 380, compactWidth: 350, compactHeight: 36,
                 visibleDepth: depth, isCapsule: false).path(in: rect)
             for y in stride(from: 0.5, to: 36.0, by: 2) {
