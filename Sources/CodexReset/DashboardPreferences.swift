@@ -38,6 +38,8 @@ struct DashboardPreferences: Codable, Equatable {
     var showConversations = true
     var highlightNewReset = true
     var compactModelName = false
+    var language: AppLanguage?
+    var appLanguage: AppLanguage { language ?? .portuguese }
     var classicEditor: Bool?
     var preferredActivityWidth: Double?
     var preferredDetailWidth: Double?
@@ -95,10 +97,10 @@ struct DashboardPreferences: Codable, Equatable {
             case .conversation: return thread.title
             case .project: return thread.projectName
             case .model: return compactModelName ? Format.shortModel(thread.model) : Format.model(thread.model)
-            case .effort: return Format.effort(thread.effort)
-            case .tokenRate: return Format.tokenRate(thread.tokenRate)
-            case .outputTokenRate: return Format.tokenRate(thread.outputTokenRate)
-            default: return field.label
+            case .effort: return Format.effort(thread.effort, language: appLanguage)
+            case .tokenRate: return Format.tokenRate(thread.tokenRate, language: appLanguage)
+            case .outputTokenRate: return Format.tokenRate(thread.outputTokenRate, language: appLanguage)
+            default: return appLanguage.text(field.label)
             }
         }}.filter { !$0.isEmpty }
     }
@@ -110,11 +112,11 @@ struct LastResetNotice: Codable, Equatable {
     var isUnseen: Bool { presentations == 0 }
     var isNew: Bool { presentations < 3 }
     mutating func presented() { presentations = min(3, presentations + 1) }
-    func elapsed(at now: Date) -> String {
+    func elapsed(at now: Date, language: AppLanguage = .portuguese) -> String {
         let seconds = max(0, now.timeIntervalSince(date))
-        if seconds < 60 { return "agora" }
-        if seconds < 3_600 { return "há \(Int(seconds / 60))m" }
-        if seconds < 86_400 { return "há \(Int(seconds / 3_600))h" }
-        return "há \(Int(seconds / 86_400))d \(Int(seconds / 3_600) % 24)h"
+        if seconds < 60 { return language.text("agora") }
+        if seconds < 3_600 { return language.text("há %@", "\(Int(seconds / 60))m") }
+        if seconds < 86_400 { return language.text("há %@", "\(Int(seconds / 3_600))h") }
+        return language.text("há %@", "\(Int(seconds / 86_400))d \(Int(seconds / 3_600) % 24)h")
     }
 }

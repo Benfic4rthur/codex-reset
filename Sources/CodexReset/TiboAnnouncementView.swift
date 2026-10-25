@@ -15,8 +15,8 @@ struct TiboAnnouncementView: View {
                     .padding(1).background(.black, in: Circle()).offset(x: 3, y: 1)
             }.frame(width: size + 5, height: size + 3)
         }
-        .buttonStyle(.plain).accessibilityLabel("Ler último anúncio de reset do Tibo")
-        .help("Último anúncio de reset · traduzido para português")
+        .buttonStyle(.plain).accessibilityLabel(store.tr("Ler último anúncio de reset do Tibo"))
+        .help(store.tr("Último anúncio de reset · traduzido para português"))
         .onHover { inside in
             closeWork?.cancel()
             if inside { presented = true } else { scheduleClose() }
@@ -57,71 +57,87 @@ private struct AnnouncementCard: View {
                 TiboAvatar(size: 36)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Tibo · @thsottiaux").font(.headline)
-                    Text("Último anúncio de reset").font(.caption).foregroundStyle(.secondary)
+                    Text(store.tr("Último anúncio de reset")).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
             }
             if let post = store.forecast?.latestAnnouncement {
-                Text(post.date.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary)
-                if #available(macOS 15.0, *) {
-                    PortuguesePost(post: post, store: store)
+                Text(store.language.date(post.date)).font(.caption).foregroundStyle(.secondary)
+                if !store.language.needsAnnouncementTranslation {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(post.readableText).font(.system(size: 14)).textSelection(.enabled)
+                        Text(store.tr("Tradução automática · português")).font(.caption2).foregroundStyle(.secondary)
+                    }
+                } else if #available(macOS 15.0, *) {
+                    TranslatedPost(post: post, store: store, language: store.language)
+                        .id(store.language.translationKey(for: post))
                 } else {
-                    Text("A tradução integrada requer macOS 15 ou posterior.").font(.caption).foregroundStyle(.secondary)
+                    Text(store.tr("A tradução integrada requer macOS 15 ou posterior.")).font(.caption).foregroundStyle(.secondary)
                     Text(post.readableText).font(.system(size: 13)).textSelection(.enabled)
                 }
                 if !post.links.isEmpty {
                     HStack(spacing: 6) {
                         ForEach(Array(post.links.enumerated()), id: \.element) { index, url in
-                            Link("Link \(index + 1) ↗", destination: url)
+                            Link(store.tr("Link %d ↗", index + 1), destination: url)
                                 .font(.caption).padding(.horizontal, 8).padding(.vertical, 5)
                                 .background(.quaternary, in: RoundedRectangle(cornerRadius: 5)).help(url.absoluteString)
                         }
-                        Link("Anúncio original ↗", destination: post.url)
+                        Link(store.tr("Anúncio original ↗"), destination: post.url)
                             .font(.caption).padding(.horizontal, 8).padding(.vertical, 5)
                             .background(.quaternary, in: RoundedRectangle(cornerRadius: 5))
                     }
                 } else {
-                    Link("Anúncio original ↗", destination: post.url).font(.caption)
+                    Link(store.tr("Anúncio original ↗"), destination: post.url).font(.caption)
                 }
             } else {
-                Text(store.isRefreshingForecast ? "Buscando o anúncio…" : "Anúncio ainda indisponível.")
+                Text(store.isRefreshingForecast ? store.tr("Buscando o anúncio…") : store.tr("Anúncio ainda indisponível."))
                     .foregroundStyle(.secondary)
-                Button("Atualizar") { store.refreshForecast() }
+                Button(store.tr("Atualizar")) { store.refreshForecast() }
             }
         }.padding(18).frame(width: 370)
+        .environment(\.locale, store.language.locale)
     }
 }
 
 @available(macOS 15.0, *)
-private struct PortuguesePost: View {
+private struct TranslatedPost: View {
     let post: ResetPost
     @ObservedObject var store: DashboardStore
-    @State private var error: String?
-    @State private var configuration = TranslationSession.Configuration(
-        source: Locale.Language(identifier: "en"), target: Locale.Language(identifier: "pt-BR"))
+    let language: AppLanguage
+    @State private var failed = false
+    @State private var configuration: TranslationSession.Configuration
+
+    init(post: ResetPost, store: DashboardStore, language: AppLanguage) {
+        self.post = post
+        self.store = store
+        self.language = language
+        _configuration = State(initialValue: TranslationSession.Configuration(
+            source: Locale.Language(identifier: "en"), target: Locale.Language(identifier: language.rawValue)))
+    }
+
+    private var cacheKey: String { language.translationKey(for: post) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let translated = store.translatedPosts[post.id] {
+            if let translated = store.translatedPosts[cacheKey] {
                 Text(translated).font(.system(size: 14)).textSelection(.enabled)
-                Text("Tradução automática · português").font(.caption2).foregroundStyle(.secondary)
-            } else if let error {
-                Text(error).font(.caption).foregroundStyle(.secondary)
+                Text(store.tr("Tradução automática · português")).font(.caption2).foregroundStyle(.secondary)
+            } else if failed {
+                Text(store.tr("Não foi possível traduzir agora. Confira os idiomas de tradução deste Mac.")).font(.caption).foregroundStyle(.secondary)
                 Text(post.readableText).font(.system(size: 13)).textSelection(.enabled)
-                Button("Tentar traduzir") { self.error = nil; configuration.invalidate() }
+                Button(store.tr("Tentar traduzir")) { failed = false; configuration.invalidate() }
             } else {
-                ProgressView("Traduzindo para português…").controlSize(.small)
+                ProgressView(store.tr("Traduzindo para português…")).controlSize(.small)
             }
         }
         .translationTask(configuration) { session in
-            guard store.translatedPosts[post.id] == nil else { return }
+            guard store.translatedPosts[cacheKey] == nil else { return }
             do {
                 let response = try await session.translate(post.readableText)
-                store.translatedPosts[post.id] = response.targetText
+                store.translatedPosts[cacheKey] = response.targetText
             } catch {
-                self.error = "Não foi possível traduzir agora. Confira os idiomas de tradução deste Mac."
+                if !Task.isCancelled { failed = true }
             }
         }
-        .onChange(of: post.id) { _, _ in error = nil; configuration.invalidate() }
     }
 }

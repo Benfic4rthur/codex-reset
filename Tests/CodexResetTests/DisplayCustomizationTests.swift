@@ -35,7 +35,7 @@ final class DisplayCustomizationTests: XCTestCase {
         XCTAssertFalse(reopened.preferences.showConversations)
         XCTAssertEqual(reopened.preferences.topRows, [[.tokenRate], [.model, .effort]])
         XCTAssertEqual(reopened.preferences.detailRows, [[.weeklyReset], [], []])
-        XCTAssertEqual(reopened.preferences.exampleRows(for: thread()), [["— tok/s"], ["6.1", "Ultra"]])
+        XCTAssertEqual(reopened.preferences.exampleRows(for: thread()), [["— tok/s"], ["6.1 Sol", "Ultra"]])
     }
 
     func testCorruptSavedPreferencesFallBackToUsableDefaults() {

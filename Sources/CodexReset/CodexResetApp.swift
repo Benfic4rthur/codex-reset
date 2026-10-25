@@ -81,16 +81,31 @@ final class DashboardStore: ObservableObject {
     @Published private(set) var showNewResetInPanel = false
     var onOpenSettings: (() -> Void)?
     @Published private(set) var usage: UsageSnapshot?
-    @Published private(set) var usageError: String?
+    @Published private var usageFailure: Error?
+    var usageError: String? { usageFailure.map { language.error($0) } }
     @Published private(set) var activeThreads: [ActiveThread] = []
-    @Published private(set) var threadsError: String?
+    @Published private var threadsFailure: Error?
+    var threadsError: String? { threadsFailure.map { language.error($0) } }
     @Published private(set) var forecast: ResetForecast?
-    @Published private(set) var forecastError: String?
+    @Published private var forecastFailure: Error?
+    var forecastError: String? { forecastFailure.map { language.error($0) } }
     @Published private(set) var isRefreshingForecast = false
     @Published var showsAnnouncement = false
     @Published var translatedPosts: [String: String] = [:]
     @Published var listExpanded = false
     @Published var showHoverDetails = false
+
+    var language: AppLanguage { preferences.appLanguage }
+    func tr(_ key: String, _ arguments: CVarArg...) -> String {
+        // Forward a typed argument list without changing the localized format.
+        let format = language.text(key)
+        return arguments.isEmpty ? format : String(format: format, locale: language.locale, arguments: arguments)
+    }
+    func restoreDefaultLayout() {
+        var restored = DashboardPreferences()
+        restored.language = preferences.language
+        preferences = restored
+    }
 
     var rootThreads: [ActiveThread] {
         activeThreads.filter { !$0.isSubagent }.sorted(by: Self.heavier)
@@ -110,15 +125,15 @@ final class DashboardStore: ObservableObject {
         case .conversation: return heaviestThread?.title
         case .project: return heaviestThread?.projectName
         case .model: return heaviestThread.map { preferences.compactModelName ? Format.shortModel($0.model) : Format.model($0.model) }
-        case .effort: return heaviestThread.map { Format.effort($0.effort) }
-        case .tokenRate: return Format.tokenRate(heaviestThread?.tokenRate)
-        case .outputTokenRate: return Format.tokenRate(heaviestThread?.outputTokenRate)
-        case .activeCount: return "\(rootThreads.count) ativa\(rootThreads.count == 1 ? "" : "s")"
+        case .effort: return heaviestThread.map { Format.effort($0.effort, language: language) }
+        case .tokenRate: return Format.tokenRate(heaviestThread?.tokenRate, language: language)
+        case .outputTokenRate: return Format.tokenRate(heaviestThread?.outputTokenRate, language: language)
+        case .activeCount: return tr(rootThreads.count == 1 ? "%d ativa" : "%d ativas", rootThreads.count)
         case .quota: return usage?.displayedWindow.map { "\(Int($0.remainingPercent.rounded()))%" } ?? "—%"
-        case .extraReset: return forecast?.presentation(at: now).headline.replacingOccurrences(of: "\n", with: " ")
-            ?? (isRefreshingForecast || forecastError == nil ? "Buscando previsão…" : "Previsão indisponível")
-        case .weeklyReset: return usage?.weeklyWindow?.resetsAt.flatMap { ResetCountdown.remaining(until: $0, at: now) }.map { "Em " + $0 } ?? "Aguardando atualização"
-        case .lastReset: return lastResetNotice.map { $0.elapsed(at: now) } ?? "Ainda não observado"
+        case .extraReset: return forecast?.presentation(at: now, language: language).headline.replacingOccurrences(of: "\n", with: " ")
+            ?? (isRefreshingForecast || forecastError == nil ? tr("Buscando previsão…") : tr("Previsão indisponível"))
+        case .weeklyReset: return usage?.weeklyWindow?.resetsAt.flatMap { ResetCountdown.remaining(until: $0, at: now) }.map { tr("Em %@", $0) } ?? tr("Aguardando atualização")
+        case .lastReset: return lastResetNotice.map { $0.elapsed(at: now, language: language) } ?? tr("Ainda não observado")
         case .tiboAnnouncement: return "Tibo"
         }
     }
@@ -126,13 +141,13 @@ final class DashboardStore: ObservableObject {
 
     func tokenRateDescription(for field: DashboardField) -> String {
         let description = field == .outputTokenRate
-            ? "Somente tokens de saída, incluindo raciocínio. Média entre atualizações, não velocidade instantânea."
-            : "Entrada + saída, incluindo contexto em cache. Não equivale à franquia debitada nem à velocidade de geração."
+            ? tr("Somente tokens de saída, incluindo raciocínio. Média entre atualizações, não velocidade instantânea.")
+            : tr("Entrada + saída, incluindo contexto em cache. Não equivale à franquia debitada nem à velocidade de geração.")
         guard let thread = heaviestThread, let date = thread.tokenRateSampledAt else {
-            return description + " O Codex ainda não informou duas amostras recentes."
+            return description + tr(" O Codex ainda não informou duas amostras recentes.")
         }
-        return description + " Amostra de " + date.formatted(date: .omitted, time: .standard)
-            + (field == .tokenRate ? ". Cache incluído: " + Format.tokenRate(thread.cachedInputTokenRate) : "")
+        return description + tr(" Amostra de %@", language.date(date, includeDate: false))
+            + (field == .tokenRate ? tr(". Cache incluído: %@", Format.tokenRate(thread.cachedInputTokenRate, language: language)) : "")
     }
 
     private var threadsTimer: Timer?
@@ -232,9 +247,9 @@ final class DashboardStore: ObservableObject {
                 case .success(let threads):
                     if self.activeThreads != threads { self.activeThreads = threads }
                     if !self.canExpandConversations { self.listExpanded = false }
-                    self.threadsError = nil
+                    self.threadsFailure = nil
                 case .failure(let error):
-                    self.threadsError = error.localizedDescription
+                    self.threadsFailure = error
                 }
             }
         }
@@ -252,7 +267,7 @@ final class DashboardStore: ObservableObject {
                 case .success(let snapshot):
                     self.receiveUsage(snapshot)
                 case .failure(let error):
-                    self.usageError = error.localizedDescription
+                    self.usageFailure = error
                 }
             }
         }
@@ -265,7 +280,7 @@ final class DashboardStore: ObservableObject {
         }
         observeLastReset(observed, at: snapshot.fetchedAt)
         usage = snapshot
-        usageError = nil
+        usageFailure = nil
         if recordQuotaReset(observed) {
             forecast = sourceForecast?.reconcilingQuotaReset(at: observedQuotaReset)
             refreshForecast()
@@ -294,9 +309,9 @@ final class DashboardStore: ObservableObject {
                         previous: nil, current: usage, forecast: source))
                 }
                 self.forecast = source.reconcilingQuotaReset(at: self.observedQuotaReset)
-                self.forecastError = nil
+                self.forecastFailure = nil
             } catch {
-                self.forecastError = error.localizedDescription
+                self.forecastFailure = error
             }
         }
     }
@@ -557,7 +572,7 @@ private struct NotchRootView: View {
             .overlay(alignment: store.preferences.showQuota ? .leading : .trailing) {
                 if store.hasUnseenReset {
                     Circle().fill(Visual.accent).frame(width: 5, height: 5).padding(.horizontal, 4)
-                        .accessibilityLabel("Novo reset ainda não visto")
+                        .accessibilityLabel(store.tr("Novo reset ainda não visto"))
                 }
             }
 
@@ -571,6 +586,7 @@ private struct NotchRootView: View {
         }
         .frame(width: geometry.envelopeWidth, height: geometry.envelopeHeight, alignment: .top)
         .foregroundStyle(Visual.primary)
+        .environment(\.locale, store.language.locale)
         .background(alignment: .top) {
             NotchSurface(
                 width: expanded ? geometry.expandedWidth : compactWidth,
@@ -601,7 +617,7 @@ private struct QuotaCompactView: View {
         }
         .animation(.easeInOut(duration: 0.35), value: remainingFraction)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Franquia semanal do Codex: " + percentage + " restante")
+        .accessibilityLabel(store.tr("Franquia semanal do Codex: %@ restante", percentage))
     }
 
     private var capsuleQuota: some View {
@@ -707,8 +723,8 @@ private struct ThreadCompactView: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(Visual.primary)
-        .accessibilityLabel(store.listExpanded ? "Ocultar outras conversas" : "Mostrar outras conversas")
-        .help(store.listExpanded ? "Ocultar outras conversas" : "Mostrar outras conversas")
+        .accessibilityLabel(store.listExpanded ? store.tr("Ocultar outras conversas") : store.tr("Mostrar outras conversas"))
+        .help(store.listExpanded ? store.tr("Ocultar outras conversas") : store.tr("Mostrar outras conversas"))
     }
 }
 
@@ -740,14 +756,14 @@ private struct CenteredDetailView: View {
                 }
                 if store.listExpanded && store.canExpandConversations {
                     VStack(spacing: 3) {
-                        Text("OUTRAS CONVERSAS · \(store.rootThreads.count - 1)").detailHeading()
+                        Text(store.tr("OUTRAS CONVERSAS · %d", store.rootThreads.count - 1)).detailHeading()
                         ScrollView(.vertical, showsIndicators: store.rootThreads.count > 3) {
                             VStack(spacing: 3) {
                                 ForEach(store.rootThreads.dropFirst()) { thread in
                                     HStack {
                                         Text(thread.title).fontWeight(.medium).truncationMode(.tail)
                                         Spacer(minLength: 8)
-                                        Text(Format.model(thread.model) + " · " + Format.effort(thread.effort))
+                                        Text(Format.model(thread.model) + " · " + Format.effort(thread.effort, language: store.language))
                                     }
                                     .font(.system(size: 9)).foregroundStyle(Visual.secondary).lineLimit(1)
                                 }
@@ -771,7 +787,7 @@ private struct CenteredDetailView: View {
                         .frame(width: 28, height: 28).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain).foregroundStyle(Visual.muted)
-                .accessibilityLabel("Abrir configurações").help("Configurações do Codex Reset")
+                .accessibilityLabel(store.tr("Abrir configurações")).help(store.tr("Configurações do Codex Reset"))
                 .modifier(PointingHandCursor())
                 .offset(x: -(refreshButtonX - 14), y: 2)
             }
@@ -781,7 +797,7 @@ private struct CenteredDetailView: View {
                         .frame(width: 28, height: 28).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain).foregroundStyle(Visual.muted)
-                .accessibilityLabel("Fechar Codex Reset").help("Fechar Codex Reset")
+                .accessibilityLabel(store.tr("Fechar Codex Reset")).help(store.tr("Fechar Codex Reset"))
                 .modifier(PointingHandCursor()).padding(.top, 2)
             }
         }
@@ -794,24 +810,24 @@ private struct CenteredDetailView: View {
         } else if field == .lastReset {
             HStack(spacing: 5) {
                 Image(systemName: store.showNewResetInPanel ? "sparkle" : "clock.arrow.circlepath")
-                Text("\(store.showNewResetInPanel ? "Novo reset" : "Último reset") · \(store.text(for: field, at: now) ?? "—")")
+                Text("\(store.showNewResetInPanel ? store.tr("Novo reset") : store.tr("Último reset")) · \(store.text(for: field, at: now) ?? "—")")
             }
             .font(.system(size: 10, weight: store.showNewResetInPanel ? .semibold : .regular))
             .foregroundStyle(store.showNewResetInPanel ? Visual.accent : Visual.secondary)
-            .help(store.lastResetNotice.map { "Franquia renovada em " + $0.date.formatted(date: .abbreviated, time: .shortened) } ?? "Aguardando dados da conta")
+            .help(store.lastResetNotice.map { store.tr("Franquia renovada em %@", store.language.date($0.date)) } ?? store.tr("Aguardando dados da conta"))
         } else {
             VStack(spacing: 3) {
-                Text(field.label.uppercased()).detailHeading()
-                Text(store.text(for: field, at: now) ?? "Sem atividade")
+                Text(store.tr(field.label).uppercased(with: store.language.locale)).detailHeading()
+                Text(store.text(for: field, at: now) ?? store.tr("Sem atividade"))
                     .font(.system(size: 12, weight: .semibold)).lineLimit(2).minimumScaleFactor(0.75)
                     .frame(maxWidth: .infinity, minHeight: field == .extraReset || field == .weeklyReset ? 32 : 18)
                 if field == .extraReset {
                     Text(extraCaption(at: now)).font(.system(size: 10)).foregroundStyle(Visual.secondary).lineLimit(1)
                 } else if field == .tokenRate || field == .outputTokenRate {
-                    Text(field == .tokenRate ? "Entrada + saída · cache incluído" : "Média de saída")
+                    Text(field == .tokenRate ? store.tr("Entrada + saída · cache incluído") : store.tr("Média de saída"))
                         .font(.system(size: 9)).foregroundStyle(Visual.secondary).lineLimit(1).minimumScaleFactor(0.75)
                 } else if field == .weeklyReset {
-                    Text("Informado pelo Codex").font(.system(size: 10)).foregroundStyle(Visual.secondary).lineLimit(1)
+                    Text(store.tr("Informado pelo Codex")).font(.system(size: 10)).foregroundStyle(Visual.secondary).lineLimit(1)
                 }
             }.frame(maxWidth: .infinity)
         }
@@ -833,34 +849,34 @@ private struct CenteredDetailView: View {
         .buttonStyle(.plain)
         .foregroundStyle(Visual.accent)
         .disabled(store.isRefreshingForecast)
-        .accessibilityLabel(store.isRefreshingForecast ? "Atualizando previsão" : "Atualizar previsão do reset extra")
-        .help(store.forecastError.map { "Falha na última consulta: \($0) Clique para tentar novamente." }
-            ?? "Consultar agora a previsão do reset extra")
+        .accessibilityLabel(store.isRefreshingForecast ? store.tr("Atualizando previsão") : store.tr("Atualizar previsão do reset extra"))
+        .help(store.forecastError.map { store.tr("Falha na última consulta: %@ Clique para tentar novamente.", $0) }
+            ?? store.tr("Consultar agora a previsão do reset extra"))
         .modifier(PointingHandCursor())
     }
 
     private func extraHeadline(at now: Date) -> String {
         guard let forecast = store.forecast else {
-            return store.isRefreshingForecast || store.forecastError == nil ? "Buscando previsão…" : "Previsão indisponível"
+            return store.isRefreshingForecast || store.forecastError == nil ? store.tr("Buscando previsão…") : store.tr("Previsão indisponível")
         }
-        return forecast.presentation(at: now).headline
+        return forecast.presentation(at: now, language: store.language).headline
     }
 
     private func extraCaption(at now: Date) -> String {
         guard let forecast = store.forecast else {
-            return store.isRefreshingForecast || store.forecastError == nil ? "Histórico em atualização" : "Fonte indisponível"
+            return store.isRefreshingForecast || store.forecastError == nil ? store.tr("Histórico em atualização") : store.tr("Fonte indisponível")
         }
-        return forecast.presentation(at: now).caption
+        return forecast.presentation(at: now, language: store.language).caption
     }
 
     private func weeklyHeadline(at now: Date) -> String {
         guard let reset = store.usage?.weeklyWindow?.resetsAt else {
-            return "Horário ainda indisponível"
+            return store.tr("Horário ainda indisponível")
         }
         guard let countdown = ResetCountdown.remaining(until: reset, at: now) else {
-            return "Aguardando atualização"
+            return store.tr("Aguardando atualização")
         }
-        return "Em \(countdown)"
+        return store.tr("Em %@", countdown)
     }
 
 }
@@ -893,16 +909,16 @@ private extension View {
 }
 
 enum Format {
-    static func tokenRate(_ value: Double?) -> String {
+    static func tokenRate(_ value: Double?, language: AppLanguage = .portuguese) -> String {
         guard let value, value.isFinite, value >= 0 else { return "— tok/s" }
         if value < 1 { return "<1 tok/s" }
-        if value >= 1_000_000 { return "~" + String(format: "%.1fM", value / 1_000_000).replacingOccurrences(of: ".", with: ",") + " tok/s" }
-        if value >= 1_000 { return "~" + String(format: "%.1fk", value / 1_000).replacingOccurrences(of: ".", with: ",") + " tok/s" }
+        if value >= 1_000_000 { return "~" + String(format: "%.1fM", value / 1_000_000).replacingOccurrences(of: ".", with: language == .english ? "." : ",") + " tok/s" }
+        if value >= 1_000 { return "~" + String(format: "%.1fk", value / 1_000).replacingOccurrences(of: ".", with: language == .english ? "." : ",") + " tok/s" }
         return "~\(Int(min(value.rounded(), 999_999_999))) tok/s"
     }
     static func shortModel(_ value: String) -> String {
-        let pieces = value.split(separator: "-")
-        return pieces.count > 1 && pieces[0].lowercased() == "gpt" ? String(pieces[1]) : value
+        let formatted = model(value)
+        return formatted.lowercased().hasPrefix("gpt-") ? String(formatted.dropFirst(4)) : formatted
     }
 
     static func model(_ value: String) -> String {
@@ -911,14 +927,14 @@ enum Format {
         return (["GPT-\(pieces[1])"] + pieces.dropFirst(2).map { $0.capitalized }).joined(separator: " ")
     }
 
-    static func effort(_ value: String) -> String {
+    static func effort(_ value: String, language: AppLanguage = .portuguese) -> String {
         switch value.lowercased() {
-        case "xhigh": return "X-high"
-        case "ultra": return "Ultra"
-        case "max": return "Max"
-        case "high": return "High"
-        case "medium": return "Medium"
-        case "low": return "Low"
+        case "xhigh": return language.text("X-high")
+        case "ultra": return language.text("Ultra")
+        case "max": return language.text("Max")
+        case "high": return language.text("High")
+        case "medium": return language.text("Medium")
+        case "low": return language.text("Low")
         default: return value
         }
     }

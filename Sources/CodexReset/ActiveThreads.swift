@@ -21,18 +21,18 @@ struct ActiveThread: Identifiable, Equatable {
 
 enum ActiveThreadReader {
     private static let tokenReader = TokenUsageReader()
-    enum ReadError: LocalizedError {
+    enum ReadError: AppLocalizedError {
         case databaseUnavailable
         case openFailed
         case attachFailed
         case queryFailed
 
-        var errorDescription: String? {
+        func message(in language: AppLanguage) -> String {
             switch self {
             case .databaseUnavailable:
-                return "Não encontrei o histórico local do Codex neste Mac."
+                return language.text("Não encontrei o histórico local do Codex neste Mac.")
             case .openFailed, .attachFailed, .queryFailed:
-                return "Não foi possível ler as conversas ativas do Codex."
+                return language.text("Não foi possível ler as conversas ativas do Codex.")
             }
         }
     }

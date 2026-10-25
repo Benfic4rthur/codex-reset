@@ -18,17 +18,17 @@ struct EstimatedResetWindow: Sendable {
     let startsAt: Date
     let endsAt: Date
 
-    func presentation(at now: Date, isSmallSample: Bool = false) -> (headline: String, caption: String) {
+    func presentation(at now: Date, isSmallSample: Bool = false, language: AppLanguage = .portuguese) -> (headline: String, caption: String) {
         guard let end = ResetCountdown.remaining(until: endsAt, at: now) else {
-            return ("Janela encerrada", "Aguardando novos dados")
+            return (language.text("Janela encerrada"), language.text("Aguardando novos dados"))
         }
         guard let start = ResetCountdown.remaining(until: startsAt, at: now) else {
             if isSmallSample {
-                return ("Dentro da janela\nAté \(end)", "Estimativa · poucos dados")
+                return (language.text("Dentro da janela\nAté %@", end), language.text("Estimativa · poucos dados"))
             }
-            return ("Dentro da janela", "Estimativa: até \(end)")
+            return (language.text("Dentro da janela"), language.text("Estimativa: até %@", end))
         }
-        return ("Entre \(start)\ne \(end)", isSmallSample ? "Estimativa · poucos dados" : "Estimativa histórica")
+        return (language.text("Entre %@\ne %@", start, end), isSmallSample ? language.text("Estimativa · poucos dados") : language.text("Estimativa histórica"))
     }
 }
 
@@ -107,36 +107,36 @@ struct ResetForecast: Sendable {
             sourceURL: sourceURL, historicalIntervals: historicalIntervals, latestAnnouncement: latestAnnouncement)
     }
 
-    func presentation(at now: Date) -> (headline: String, caption: String) {
+    func presentation(at now: Date, language: AppLanguage = .portuguese) -> (headline: String, caption: String) {
         if let announcement = scheduledReset {
             if let date = announcement.scheduledFor {
                 if let countdown = ResetCountdown.remaining(until: date, at: now) {
-                    return ("Em \(countdown)", "Anúncio verificado na fonte")
+                    return (language.text("Em %@", countdown), language.text("Anúncio verificado na fonte"))
                 }
-                return ("Horário anunciado passou", "Aguardando confirmação")
+                return (language.text("Horário anunciado passou"), language.text("Aguardando confirmação"))
             }
-            return ("Reset extra anunciado", "Anúncio verificado na fonte")
+            return (language.text("Reset extra anunciado"), language.text("Anúncio verificado na fonte"))
         }
         if let window = estimatedWindow {
-            return window.presentation(at: now, isSmallSample: hasSmallSample)
+            return window.presentation(at: now, isSmallSample: hasSmallSample, language: language)
         }
-        return ("Sem estimativa", "Histórico insuficiente")
+        return (language.text("Sem estimativa"), language.text("Histórico insuficiente"))
     }
 }
 
-enum ResetForecastError: LocalizedError {
+enum ResetForecastError: AppLocalizedError {
     case invalidResponse
     case unavailable(Int)
     case noObservedResets
 
-    var errorDescription: String? {
+    func message(in language: AppLanguage) -> String {
         switch self {
         case .invalidResponse:
-            return "A fonte de resets retornou dados inválidos."
+            return language.text("A fonte de resets retornou dados inválidos.")
         case .unavailable(let code):
-            return "A fonte de resets está indisponível (HTTP \(code))."
+            return language.text("A fonte de resets está indisponível (HTTP %d).", code)
         case .noObservedResets:
-            return "Ainda não há resets extraordinários observados para calcular a estimativa."
+            return language.text("Ainda não há resets extraordinários observados para calcular a estimativa.")
         }
     }
 }

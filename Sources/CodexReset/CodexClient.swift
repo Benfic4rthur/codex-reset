@@ -29,25 +29,25 @@ struct UsageSnapshot {
     }
 }
 
-enum CodexClientError: LocalizedError {
+enum CodexClientError: AppLocalizedError {
     case executableMissing
     case disconnected
     case timeout(String)
     case malformedResponse(String)
     case server(String)
 
-    var errorDescription: String? {
+    func message(in language: AppLanguage) -> String {
         switch self {
         case .executableMissing:
-            return "Não encontrei o executável do Codex neste Mac."
+            return language.text("Não encontrei o executável do Codex neste Mac.")
         case .disconnected:
-            return "A conexão com o Codex foi encerrada."
+            return language.text("A conexão com o Codex foi encerrada.")
         case .timeout(let method):
-            return "O Codex demorou demais para responder: \(method)."
+            return language.text("O Codex demorou demais para responder: %@.", method)
         case .malformedResponse(let method):
-            return "O Codex retornou dados incompletos: \(method)."
+            return language.text("O Codex retornou dados incompletos: %@.", method)
         case .server(let message):
-            return message
+            return message == "Erro do Codex." ? language.text("Erro do Codex.") : message
         }
     }
 }

@@ -60,6 +60,8 @@ Porcentagem alta sozinha não confirma reset. Consultas repetidas não reiniciam
 A engrenagem abre as configurações com um desenho do notch: arraste os campos
 para as duas linhas da direita e as três linhas do painel aberto. Use x para remover.
 O botão de ocultar fecha somente a janela, mantendo o monitor ativo.
+Nas configurações, escolha Português, English ou Español para todo o app.
+O nome curto remove apenas GPT-, mantendo a família do modelo (ex.: 6.1 Sol).
 Total processado/s soma entrada e saída, incluindo cache; Saída/s mostra só saída.
 São médias entre as últimas atualizações do Codex, não franquia debitada.
 Não é uma medição instantânea; sem amostras recentes, mostra um traço.

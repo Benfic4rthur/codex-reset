@@ -19,6 +19,8 @@
 
 - O campo Anúncio do Tibo cobre somente anúncios de reset de @thsottiaux na fonte existente. Apresente links clicáveis, avatar e tradução do macOS, sem usar a franquia do Codex nem ler o conteúdo das conversas para isso. Preserve o desenho do editor centralizado, com uma peça preta contínua. Acomode as configurações sem rolagem interna, usando abas em telas menores. Centralize cada campo de uma linha em colunas de mesma largura; mantenha os links do cartão em uma fileira compacta.
 
+- O idioma escolhido (português, inglês ou espanhol) deve valer para todas as superfícies do app, incluindo notch, detalhes, avisos e configurações, com troca imediata e preferência local. Preserve layouts antigos ao migrar preferências. O nome curto remove somente o prefixo GPT-, preservando versão e família do modelo.
+
 ## Privacidade
 
 - Nunca versione nem distribua chaves, tokens, arquivos .env, autenticação do Codex, bancos locais, logs, certificados privados ou dados de conversas.
