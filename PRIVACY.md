@@ -5,10 +5,10 @@ O Codex Reset funciona no Mac de quem o instalou e usa o Codex autenticado nesse
 ## Dados locais consultados
 
 - **Franquia e renovação:** consulta somente de leitura ao método `account/rateLimits/read` do Codex App Server local. A autenticação continua sob responsabilidade do Codex instalado. O monitor não exporta nem copia o arquivo de autenticação.
-- **Conversas ativas:** acesso de leitura aos bancos `state_5.sqlite` e `thread_history_1.sqlite` na pasta local do Codex. São consultados identificadores, nomes de projetos e conversas, modelo, esforço e estado da execução. O conteúdo das mensagens não é lido.
+- **Conversas ativas:** acesso de leitura aos bancos `state_5.sqlite` e `thread_history_1.sqlite` na pasta local do Codex. São consultados identificadores, nomes de projetos e conversas, modelo, esforço, total acumulado de tokens e estado da execução. O consumo estimado em tokens por segundo usa a diferença entre esses totais em amostras de cinco segundos. O conteúdo das mensagens não é lido.
 - A pasta do Codex é resolvida para o usuário atual, respeitando `CODEX_HOME` quando definido. Nenhum caminho pessoal de outro usuário é necessário.
 
-Os dados apresentados ficam em memória. Os bancos consultados não são modificados pelo monitor. Não há envio do histórico, nomes de projetos ou franquia para o GitHub ou para um servidor do projeto.
+A franquia e os metadados das conversas ficam em memória. As preferências locais do macOS guardam somente a disposição dos campos, as medidas escolhidas, o horário do último reset observado na conta e quantas vezes o aviso já foi apresentado. Não são salvos nomes de conversas, contagens de tokens, credenciais ou cópias dos bancos. Os bancos consultados não são modificados pelo monitor. Não há envio do histórico, nomes de projetos ou franquia para o GitHub ou para um servidor do projeto.
 
 ## Conexões
 

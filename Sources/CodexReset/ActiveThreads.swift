@@ -9,6 +9,8 @@ struct ActiveThread: Identifiable, Equatable {
     let effort: String
     let startedAt: Date?
     let isSubagent: Bool
+    var tokensUsed: Int64? = nil
+    var tokenRate: Double? = nil
 }
 
 enum ActiveThreadReader {
@@ -98,7 +100,8 @@ enum ActiveThreadReader {
                    CASE WHEN t.agent_path IS NOT NULL
                              OR t.thread_source = 'subagent'
                              OR t.source LIKE '{"subagent":%'
-                        THEN 1 ELSE 0 END
+                        THEN 1 ELSE 0 END,
+                   t.tokens_used
             FROM newest_turn AS n
             JOIN main.threads AS t ON t.id = n.thread_id
             LEFT JOIN main.projects AS project ON project.id = t.project_id
@@ -125,7 +128,8 @@ enum ActiveThreadReader {
                     startedAt: sqlite3_column_type(statement, 5) == SQLITE_NULL
                         ? nil
                         : Date(timeIntervalSince1970: TimeInterval(sqlite3_column_int64(statement, 5))),
-                    isSubagent: sqlite3_column_int(statement, 6) != 0
+                    isSubagent: sqlite3_column_int(statement, 6) != 0,
+                    tokensUsed: sqlite3_column_type(statement, 7) == SQLITE_NULL ? nil : sqlite3_column_int64(statement, 7)
                 ))
             case SQLITE_DONE:
                 return threads

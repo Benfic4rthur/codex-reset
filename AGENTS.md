@@ -12,6 +12,11 @@
 - Cruze anúncios de reset vencidos com a renovação observada na franquia semanal da conta. Ao identificar a renovação, encerre o aviso antigo, consulte a fonte e recalcule a janela ancorada no reset observado, usando somente os intervalos do site. Porcentagem alta sozinha não confirma reset; consultas repetidas não podem reiniciar a contagem nem restaurar o anúncio antigo.
 - Não sobrescreva uma versão publicada; publique uma versão nova.
 
+- A engrenagem à direita deve espelhar a posição do botão de atualizar. As configurações permitem arrastar campos para duas linhas no lado direito e três linhas de detalhes, com preferências locais persistentes. A janela aparece no Dock enquanto aberta; fechar ou ocultar a janela não encerra o monitor.
+- Tokens por segundo é consumo estimado pela diferença do total de tokens, incluindo entrada e saída, com amostras de cinco segundos; não apresente como velocidade de geração. Reinicie a amostra ao trocar de turno ou após suspensão.
+- O último reset da conta deve exibir horário e tempo decorrido. Guarde somente a data e o número de apresentações do aviso; destaque nas três primeiras aberturas e mostre o ponto verde até a primeira.
+- Ajustes manuais e Ctrl + Option + arrastar devem preservar a câmera ancorada e a altura disponível da barra de menus. Ofereça restauração das medidas automáticas.
+
 ## Privacidade
 
 - Nunca versione nem distribua chaves, tokens, arquivos .env, autenticação do Codex, bancos locais, logs, certificados privados ou dados de conversas.

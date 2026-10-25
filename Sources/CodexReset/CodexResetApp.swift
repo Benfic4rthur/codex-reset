@@ -22,6 +22,7 @@ enum CodexResetApp {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = DashboardStore()
     private var window: NotchWindow?
+    private lazy var settings = SettingsWindowController(store: store)
     private var hostTerminationObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -39,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         window = NotchWindow(store: store)
+        store.onOpenSettings = { [weak self] in self?.settings.show() }
         store.start()
         hostTerminationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main
@@ -57,10 +59,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store.stop()
         window?.stop()
     }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        settings.show()
+        return false
+    }
 }
 
 @MainActor
 final class DashboardStore: ObservableObject {
+    @Published var preferences: DashboardPreferences {
+        didSet {
+            if let data = try? JSONEncoder().encode(preferences) { defaults.set(data, forKey: "displayPreferences") }
+            if !canExpandConversations { listExpanded = false }
+            if !preferences.highlightNewReset { showNewResetInPanel = false }
+        }
+    }
+    @Published private(set) var lastResetNotice: LastResetNotice?
+    @Published private(set) var showNewResetInPanel = false
+    var onOpenSettings: (() -> Void)?
     @Published private(set) var usage: UsageSnapshot?
     @Published private(set) var usageError: String?
     @Published private(set) var activeThreads: [ActiveThread] = []
@@ -76,6 +95,30 @@ final class DashboardStore: ObservableObject {
     }
 
     var heaviestThread: ActiveThread? { rootThreads.first }
+    var hasTopContent: Bool { !topContent.isEmpty }
+    var canExpandConversations: Bool { hasTopContent && preferences.showConversations && rootThreads.count > 1 }
+    var topContent: [[DashboardCell]] {
+        preferences.topRows.map { row in row.compactMap { field in
+            text(for: field).map { DashboardCell(field: field, text: $0) }
+        }}.filter { !$0.isEmpty }
+    }
+
+    func text(for field: DashboardField, at now: Date = Date()) -> String? {
+        switch field {
+        case .conversation: return heaviestThread?.title
+        case .project: return heaviestThread?.projectName
+        case .model: return heaviestThread.map { preferences.compactModelName ? Format.shortModel($0.model) : Format.model($0.model) }
+        case .effort: return heaviestThread.map { Format.effort($0.effort) }
+        case .tokenRate: return heaviestThread?.tokenRate.map { "~\(Int($0.rounded())) tok/s" } ?? "— tok/s"
+        case .activeCount: return "\(rootThreads.count) ativa\(rootThreads.count == 1 ? "" : "s")"
+        case .quota: return usage?.displayedWindow.map { "\(Int($0.remainingPercent.rounded()))%" } ?? "—%"
+        case .extraReset: return forecast?.presentation(at: now).headline.replacingOccurrences(of: "\n", with: " ")
+            ?? (isRefreshingForecast || forecastError == nil ? "Buscando previsão…" : "Previsão indisponível")
+        case .weeklyReset: return usage?.weeklyWindow?.resetsAt.flatMap { ResetCountdown.remaining(until: $0, at: now) }.map { "Em " + $0 } ?? "Aguardando atualização"
+        case .lastReset: return lastResetNotice.map { $0.elapsed(at: now) } ?? "Ainda não observado"
+        }
+    }
+    var hasUnseenReset: Bool { preferences.highlightNewReset && lastResetNotice?.isUnseen == true }
 
     private var threadsTimer: Timer?
     private var usageTimer: Timer?
@@ -86,10 +129,17 @@ final class DashboardStore: ObservableObject {
     private var sourceForecast: ResetForecast?
     private var observedQuotaReset: Date?
     private let forecastLoader: @Sendable () async throws -> ResetForecast
+    private let defaults: UserDefaults
+    private var tokenSampler = TokenRateSampler()
 
-    init(forecastLoader: @escaping @Sendable () async throws -> ResetForecast = {
+    init(defaults: UserDefaults = .standard, forecastLoader: @escaping @Sendable () async throws -> ResetForecast = {
         try await ResetForecastService.fetch()
     }) {
+        self.defaults = defaults
+        preferences = defaults.data(forKey: "displayPreferences")
+            .flatMap { try? JSONDecoder().decode(DashboardPreferences.self, from: $0) } ?? DashboardPreferences()
+        lastResetNotice = defaults.data(forKey: "lastResetNotice")
+            .flatMap { try? JSONDecoder().decode(LastResetNotice.self, from: $0) }
         self.forecastLoader = forecastLoader
     }
 
@@ -119,6 +169,7 @@ final class DashboardStore: ObservableObject {
         hoverWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
+            if inside && !self.showHoverDetails { self.panelOpened() }
             self.showHoverDetails = inside
             if !inside { self.listExpanded = false }
         }
@@ -127,9 +178,30 @@ final class DashboardStore: ObservableObject {
     }
 
     func toggleThreads() {
-        guard rootThreads.count > 1 else { return }
+        guard canExpandConversations else { return }
         listExpanded.toggle()
-        if listExpanded { showHoverDetails = true }
+        if listExpanded {
+            if !showHoverDetails { panelOpened() }
+            showHoverDetails = true
+        }
+    }
+
+    func panelOpened() {
+        showNewResetInPanel = preferences.highlightNewReset && lastResetNotice?.isNew == true
+        if showNewResetInPanel {
+            lastResetNotice?.presented()
+            saveResetNotice()
+        }
+    }
+
+    private func saveResetNotice() {
+        if let data = try? JSONEncoder().encode(lastResetNotice) { defaults.set(data, forKey: "lastResetNotice") }
+    }
+
+    private func observeLastReset(_ date: Date?, at now: Date) {
+        guard let date, date <= now, date > (lastResetNotice?.date ?? .distantPast) else { return }
+        lastResetNotice = LastResetNotice(date: date, presentations: now.timeIntervalSince(date) > 86_400 ? 3 : 0)
+        if showHoverDetails { panelOpened() } else { saveResetNotice() }
     }
 
     func refreshThreads() {
@@ -142,8 +214,9 @@ final class DashboardStore: ObservableObject {
                 self.threadsInFlight = false
                 switch result {
                 case .success(let threads):
-                    if self.activeThreads != threads { self.activeThreads = threads }
-                    if self.rootThreads.count <= 1 { self.listExpanded = false }
+                    let sampled = self.tokenSampler.sample(threads, at: Date())
+                    if self.activeThreads != sampled { self.activeThreads = sampled }
+                    if !self.canExpandConversations { self.listExpanded = false }
                     self.threadsError = nil
                 case .failure(let error):
                     self.threadsError = error.localizedDescription
@@ -172,6 +245,10 @@ final class DashboardStore: ObservableObject {
 
     func receiveUsage(_ snapshot: UsageSnapshot) {
         let observed = QuotaResetObservation.detectedAt(previous: usage, current: snapshot, forecast: sourceForecast)
+        if let quota = snapshot.weeklyWindow, let end = quota.resetsAt, let duration = quota.durationMinutes {
+            observeLastReset(end.addingTimeInterval(-Double(duration) * 60), at: snapshot.fetchedAt)
+        }
+        observeLastReset(observed, at: snapshot.fetchedAt)
         usage = snapshot
         usageError = nil
         if recordQuotaReset(observed) {
@@ -261,12 +338,16 @@ private final class NotchWindow: NSObject {
     private var screenObserver: NSObjectProtocol?
     private var activityObserver: AnyCancellable?
     private var pointerInside = false
+    private var resizeMonitor: Any?
+    private var resizeOrigin: (point: CGPoint, rightWidth: CGFloat, detailWidth: CGFloat,
+                               compactHeight: CGFloat, extraHeight: Double, expanded: Bool)?
+    private var resizeCursor = false
 
     init(store: DashboardStore) {
         self.store = store
         let screen = NSScreen.main ?? NSScreen.screens[0]
-        geometry = NotchGeometry(screen: screen).fittingActivity(store.heaviestThread,
-            hasDisclosure: store.rootThreads.count > 1)
+        geometry = NotchGeometry(screen: screen).fittingLayout(rows: store.topContent.map { $0.map(\.text) },
+            hasDisclosure: store.canExpandConversations, preferences: store.preferences)
         panel = NSPanel(contentRect: geometry.frame, styleMask: [.borderless, .nonactivatingPanel],
                         backing: .buffered, defer: false)
         super.init()
@@ -297,15 +378,48 @@ private final class NotchWindow: NSObject {
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
         ) { [weak self] _ in MainActor.assumeIsolated { self?.refreshScreen() } }
-        activityObserver = store.$activeThreads
+        activityObserver = store.objectWillChange
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.refreshScreen() }
+        resizeMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp]) { [weak self] event in
+            var consumed = false
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                consumed = self.handleResize(event) == nil
+            }
+            return consumed ? nil : event
+        }
+    }
+
+    private func handleResize(_ event: NSEvent) -> NSEvent? {
+        guard event.window === panel else { return event }
+        if event.type == .leftMouseDown && event.modifierFlags.contains([.control, .option]) {
+            resizeOrigin = (NSEvent.mouseLocation, geometry.rightWingWidth, geometry.expandedWidth,
+                geometry.compactHeight, store.preferences.extraDetailHeight, store.showHoverDetails || store.listExpanded)
+            return nil
+        }
+        guard let origin = resizeOrigin else { return event }
+        if event.type == .leftMouseUp { resizeOrigin = nil; return nil }
+        guard event.type == .leftMouseDragged else { return event }
+        let delta = NSEvent.mouseLocation
+        let width = delta.x - origin.point.x
+        let height = origin.point.y - delta.y
+        var preferences = store.preferences
+        if origin.expanded {
+            preferences.preferredDetailWidth = max(320, origin.detailWidth + width)
+            preferences.extraDetailHeight = min(300, max(0, origin.extraHeight + height))
+        } else {
+            preferences.preferredActivityWidth = max(28, origin.rightWidth + width)
+            preferences.preferredCompactHeight = max(12, origin.compactHeight + height)
+        }
+        store.preferences = preferences
+        return nil
     }
 
     private func refreshScreen() {
         guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
-        let updated = NotchGeometry(screen: screen).fittingActivity(store.heaviestThread,
-            hasDisclosure: store.rootThreads.count > 1)
+        let updated = NotchGeometry(screen: screen).fittingLayout(rows: store.topContent.map { $0.map(\.text) },
+            hasDisclosure: store.canExpandConversations, preferences: store.preferences)
         guard geometry != updated else { return }
         geometry = updated
         panel.setFrame(geometry.frame, display: true)
@@ -316,23 +430,28 @@ private final class NotchWindow: NSObject {
     private func updatePointer() {
         let point = panel.convertPoint(fromScreen: NSEvent.mouseLocation)
         let detailHeight = store.listExpanded ? geometry.listDetailHeight : geometry.detailHeight
-        let hovering = geometry.topContains(point, hasActivity: store.heaviestThread != nil)
+        let hovering = geometry.topContains(point, hasActivity: store.hasTopContent)
             || ((store.showHoverDetails || store.listExpanded)
                 && geometry.detailContains(point, height: detailHeight))
         if hovering != pointerInside {
             pointerInside = hovering
             store.setHover(hovering)
         }
-        let clickable = (store.rootThreads.count > 1 && geometry.disclosureContains(point))
+        let clickable = (store.canExpandConversations && geometry.disclosureContains(point))
             || ((store.showHoverDetails || store.listExpanded)
                 && geometry.detailContains(point, height: detailHeight))
-        panel.ignoresMouseEvents = !clickable
+        let canResize = NSEvent.modifierFlags.contains([.control, .option]) && (hovering || pointerInside)
+        if canResize && !resizeCursor { NSCursor.crosshair.set() }
+        if !canResize && resizeCursor { NSCursor.arrow.set() }
+        resizeCursor = canResize
+        panel.ignoresMouseEvents = !(clickable || canResize || resizeOrigin != nil)
     }
 
     func stop() {
         pointerTimer?.invalidate()
         menuBarTimer?.invalidate()
         activityObserver?.cancel()
+        if let resizeMonitor { NSEvent.removeMonitor(resizeMonitor) }
         if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
         panel.close()
     }
@@ -403,21 +522,32 @@ private struct NotchRootView: View {
         let expanded = store.showHoverDetails || store.listExpanded
         let detailHeight = store.listExpanded ? geometry.listDetailHeight : geometry.detailHeight
         let visibleDepth = expanded ? detailHeight : 0
-        let hasActivity = store.heaviestThread != nil
+        let hasActivity = store.hasTopContent
         let compactWidth = geometry.compactWidth(hasActivity: hasActivity)
         let rightWidth = geometry.isCapsule && !hasActivity ? 0 : geometry.rightWingWidth
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                QuotaCompactView(store: store, geometry: geometry)
-                    .frame(width: geometry.leftWingWidth, height: geometry.compactHeight)
+                if store.preferences.showQuota {
+                    QuotaCompactView(store: store, geometry: geometry)
+                        .frame(width: geometry.leftWingWidth, height: geometry.compactHeight)
+                } else if geometry.isCapsule && !hasActivity {
+                    Image(systemName: "ellipsis").frame(width: geometry.leftWingWidth, height: geometry.compactHeight)
+                }
                 Color.clear.frame(width: geometry.gapWidth, height: geometry.compactHeight)
                 ThreadCompactView(store: store, geometry: geometry)
                     .frame(width: rightWidth, height: geometry.compactHeight)
             }
             .frame(width: compactWidth, height: geometry.compactHeight)
+            .clipped()
+            .overlay(alignment: store.preferences.showQuota ? .leading : .trailing) {
+                if store.hasUnseenReset {
+                    Circle().fill(Visual.accent).frame(width: 5, height: 5).padding(.horizontal, 4)
+                        .accessibilityLabel("Novo reset ainda não visto")
+                }
+            }
 
             CenteredDetailView(store: store, height: detailHeight, contentWidth: geometry.expandedWidth - 32,
-                refreshButtonX: geometry.quotaCenterXInDetails(hasActivity: hasActivity))
+                refreshButtonX: geometry.toolbarRefreshCenterX(hasActivity: hasActivity))
                 .frame(width: geometry.expandedWidth, height: detailHeight)
                 .frame(height: visibleDepth, alignment: .top)
                 .clipped()
@@ -516,70 +646,36 @@ private struct ThreadCompactView: View {
     let geometry: NotchGeometry
 
     var body: some View {
-        if let thread = store.heaviestThread {
+        Group {
             if geometry.isCapsule {
-                capsuleActivity(thread)
-            } else {
-                notchedActivity(thread)
-            }
-        }
-    }
-
-    private func capsuleActivity(_ thread: ActiveThread) -> some View {
-        HStack(spacing: 7) {
-            Text(thread.projectName)
-                .font(.system(size: geometry.capsuleActivityFontSize, weight: .semibold))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            HStack(spacing: 4) {
-                Text(Format.model(thread.model)).foregroundStyle(Visual.secondary)
-                Text("·").foregroundStyle(Visual.muted)
-                Text(Format.effort(thread.effort)).foregroundStyle(Visual.accent)
-            }
-            .font(.system(size: min(12, geometry.capsuleActivityFontSize), weight: .medium))
-            .lineLimit(1)
-            .layoutPriority(1)
-
-            if store.rootThreads.count > 1 {
-                disclosureButton(height: geometry.compactHeight)
-            }
-        }
-        .padding(.leading, 9)
-        .padding(.trailing, 7)
-        .overlay(alignment: .leading) {
-            Rectangle().fill(.white.opacity(0.22)).frame(width: 1, height: 12)
-        }
-    }
-
-    private func notchedActivity(_ thread: ActiveThread) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            HStack(spacing: 2) {
-                Text(thread.projectName)
-                    .font(.system(size: 9.2, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.65)
-                    .foregroundStyle(Visual.primary)
-                Spacer(minLength: 0)
-                if store.rootThreads.count > 1 {
-                    disclosureButton(height: 14)
+                HStack(spacing: 7) {
+                    ForEach(store.topContent.flatMap { $0 }) { cell in cellView(cell, size: geometry.capsuleActivityFontSize) }
+                    if store.canExpandConversations { disclosureButton(height: geometry.compactHeight) }
                 }
+                .padding(.horizontal, 8)
+            } else if store.hasTopContent {
+                VStack(alignment: .leading, spacing: 1) {
+                    ForEach(Array(store.topContent.enumerated()), id: \.offset) { index, cells in
+                        HStack(spacing: 5) {
+                            ForEach(cells) { cell in
+                                cellView(cell, size: min(store.topContent.count == 1 ? 10 : index == 0 ? 9.2 : 8,
+                                    max(6, (geometry.compactHeight - 2) / CGFloat(store.topContent.count) - 2)))
+                            }
+                            if index == 0 && store.canExpandConversations { disclosureButton(height: 14) }
+                        }
+                    }
+                }.padding(.leading, 6).padding(.trailing, 8)
+            } else if !store.preferences.showQuota {
+                Image(systemName: "ellipsis").font(.system(size: 11))
             }
-            HStack(spacing: 3) {
-                Text(Format.model(thread.model))
-                    .foregroundStyle(Visual.secondary)
-                Text("·").foregroundStyle(Visual.muted)
-                Text(Format.effort(thread.effort))
-                    .foregroundStyle(Visual.accent)
-            }
-            .font(.system(size: 8, weight: .medium))
-            .lineLimit(1)
-            .minimumScaleFactor(0.72)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, 6)
-        .padding(.trailing, 8)
+        }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func cellView(_ cell: DashboardCell, size: CGFloat) -> some View {
+        Text(cell.text).font(.system(size: size, weight: .medium)).lineLimit(1)
+            .truncationMode(.tail).minimumScaleFactor(0.75)
+            .foregroundStyle(cell.field == .tokenRate || cell.field == .effort ? Visual.accent : Visual.primary)
+            .layoutPriority(cell.field == .conversation || cell.field == .project ? 0 : 1)
     }
 
     private func disclosureButton(height: CGFloat) -> some View {
@@ -605,94 +701,90 @@ private struct CenteredDetailView: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
-            VStack(spacing: 0) {
-                HStack(alignment: .top, spacing: 0) {
-                    VStack(spacing: 3) {
-                        Text("RESET EXTRA").detailHeading()
-                        Text(extraHeadline(at: context.date))
-                            .font(.system(size: 12, weight: .semibold))
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(height: 32)
-                        Text(extraCaption(at: context.date))
-                            .font(.system(size: 10))
-                            .foregroundStyle(Visual.secondary)
-                            .lineLimit(1)
+            VStack(spacing: 8) {
+                ForEach(Array(store.preferences.detailRows.enumerated()), id: \.offset) { _, fields in
+                    if !fields.isEmpty {
+                        HStack(alignment: .top, spacing: 12) {
+                            ForEach(fields) { field in detailField(field, at: context.date) }
+                        }
+                        .frame(height: DashboardPreferences.detailRowHeight(fields))
                     }
-                    .frame(maxWidth: .infinity)
-
-                    Rectangle()
-                        .fill(.white.opacity(0.18))
-                        .frame(width: 1, height: 36)
-                        .padding(.horizontal, 13)
-                        .padding(.top, 22)
-
-                    VStack(spacing: 3) {
-                        Text("RESET SEMANAL").detailHeading()
-                        Text(weeklyHeadline(at: context.date))
-                            .font(.system(size: 13, weight: .semibold))
-                            .lineLimit(2)
-                            .frame(height: 32)
-                        Text("Informado pelo Codex")
-                            .font(.system(size: 10))
-                            .foregroundStyle(Visual.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
                 }
-                .frame(width: contentWidth)
-                .padding(.top, 32)
-
-                if store.listExpanded && store.rootThreads.count > 1 {
+                if store.showNewResetInPanel && !store.preferences.detailRows.joined().contains(.lastReset) {
+                    detailField(.lastReset, at: context.date).frame(height: 20)
+                }
+                if store.listExpanded && store.canExpandConversations {
                     VStack(spacing: 3) {
-                        Text("OUTRAS CONVERSAS · \(store.rootThreads.count - 1)")
-                            .detailHeading()
+                        Text("OUTRAS CONVERSAS · \(store.rootThreads.count - 1)").detailHeading()
                         ScrollView(.vertical, showsIndicators: store.rootThreads.count > 3) {
                             VStack(spacing: 3) {
                                 ForEach(store.rootThreads.dropFirst()) { thread in
-                                    HStack(spacing: 5) {
-                                        Text(thread.projectName)
-                                            .fontWeight(.medium)
-                                            .lineLimit(1)
+                                    HStack {
+                                        Text(thread.title).fontWeight(.medium).truncationMode(.tail)
                                         Spacer(minLength: 8)
-                                        Text(Format.model(thread.model))
-                                        Text("·").foregroundStyle(Visual.muted)
-                                        Text(Format.effort(thread.effort))
-                                            .foregroundStyle(Visual.accent)
+                                        Text(Format.model(thread.model) + " · " + Format.effort(thread.effort))
                                     }
-                                    .font(.system(size: 9))
-                                    .foregroundStyle(Visual.secondary)
-                                    .lineLimit(1)
+                                    .font(.system(size: 9)).foregroundStyle(Visual.secondary).lineLimit(1)
                                 }
                             }
-                        }
-                        .frame(height: 28)
+                        }.frame(height: 28)
                     }
-                    .frame(width: contentWidth)
-                    .padding(.top, 11)
                 }
                 Spacer(minLength: 0)
             }
+            .frame(width: contentWidth)
+            .padding(.top, 32)
             .frame(maxWidth: .infinity)
             .frame(height: height, alignment: .top)
             .multilineTextAlignment(.center)
             .overlay(alignment: .topLeading) {
-                forecastRefreshButton
-                    .offset(x: refreshButtonX - 14, y: 2)
+                forecastRefreshButton.offset(x: refreshButtonX - 14, y: 2)
+            }
+            .overlay(alignment: .topTrailing) {
+                Button { store.onOpenSettings?() } label: {
+                    Image(systemName: "gearshape").font(.system(size: 10, weight: .medium))
+                        .frame(width: 28, height: 28).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).foregroundStyle(Visual.muted)
+                .accessibilityLabel("Abrir configurações").help("Configurações do Codex Reset")
+                .modifier(PointingHandCursor())
+                .offset(x: -(refreshButtonX - 14), y: 2)
             }
             .overlay(alignment: .top) {
                 Button { NSApp.terminate(nil) } label: {
-                    Image(systemName: "power")
-                        .font(.system(size: 10, weight: .medium))
-                        .frame(width: 28, height: 28)
-                        .contentShape(Rectangle())
+                    Image(systemName: "power").font(.system(size: 10, weight: .medium))
+                        .frame(width: 28, height: 28).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(Visual.muted)
-                .accessibilityLabel("Fechar Codex Reset")
-                .help("Fechar Codex Reset")
-                .modifier(PointingHandCursor())
-                .padding(.top, 2)
+                .buttonStyle(.plain).foregroundStyle(Visual.muted)
+                .accessibilityLabel("Fechar Codex Reset").help("Fechar Codex Reset")
+                .modifier(PointingHandCursor()).padding(.top, 2)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func detailField(_ field: DashboardField, at now: Date) -> some View {
+        if field == .lastReset {
+            HStack(spacing: 5) {
+                Image(systemName: store.showNewResetInPanel ? "sparkle" : "clock.arrow.circlepath")
+                Text("\(store.showNewResetInPanel ? "Novo reset" : "Último reset") · \(store.text(for: field, at: now) ?? "—")")
+            }
+            .font(.system(size: 10, weight: store.showNewResetInPanel ? .semibold : .regular))
+            .foregroundStyle(store.showNewResetInPanel ? Visual.accent : Visual.secondary)
+            .padding(.top, 4)
+            .help(store.lastResetNotice.map { "Franquia renovada em " + $0.date.formatted(date: .abbreviated, time: .shortened) } ?? "Aguardando dados da conta")
+        } else {
+            VStack(spacing: 3) {
+                Text(field.label.uppercased()).detailHeading()
+                Text(store.text(for: field, at: now) ?? "Sem atividade")
+                    .font(.system(size: 12, weight: .semibold)).lineLimit(2).minimumScaleFactor(0.75)
+                    .frame(maxWidth: .infinity, minHeight: field == .extraReset || field == .weeklyReset ? 32 : 18)
+                if field == .extraReset {
+                    Text(extraCaption(at: now)).font(.system(size: 10)).foregroundStyle(Visual.secondary).lineLimit(1)
+                } else if field == .weeklyReset {
+                    Text("Informado pelo Codex").font(.system(size: 10)).foregroundStyle(Visual.secondary).lineLimit(1)
+                }
+            }.frame(maxWidth: .infinity)
         }
     }
 
@@ -772,6 +864,11 @@ private extension View {
 }
 
 enum Format {
+    static func shortModel(_ value: String) -> String {
+        let pieces = value.split(separator: "-")
+        return pieces.count > 1 && pieces[0].lowercased() == "gpt" ? String(pieces[1]) : value
+    }
+
     static func model(_ value: String) -> String {
         let pieces = value.split(separator: "-").map(String.init)
         guard pieces.count > 1, pieces[0].lowercased() == "gpt" else { return value }

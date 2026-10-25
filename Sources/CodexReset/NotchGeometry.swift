@@ -4,13 +4,14 @@ struct NotchGeometry: Equatable {
     let screenFrame: CGRect
     let centerX: CGFloat
     let gapWidth: CGFloat
-    let compactHeight: CGFloat
+    private(set) var compactHeight: CGFloat
     private(set) var rightWingWidth: CGFloat
     let topInset: CGFloat
     let isCapsule: Bool
-    let leftWingWidth: CGFloat
-    let detailHeight: CGFloat = 102
-    let listDetailHeight: CGFloat = 154
+    private(set) var leftWingWidth: CGFloat
+    private(set) var detailHeight: CGFloat = 132
+    private(set) var listDetailHeight: CGFloat = 184
+    private var customDetailWidth: CGFloat = 0
 
     init(screen: NSScreen) {
         let left = screen.auxiliaryTopLeftArea?.maxX
@@ -52,17 +53,38 @@ struct NotchGeometry: Equatable {
         }
     }
 
-    var quotaDiameter: CGFloat { 30 }
-    var quotaStrokeWidth: CGFloat { 2.7 }
+    var quotaDiameter: CGFloat { min(30, max(8, compactHeight - 4)) }
+    var quotaStrokeWidth: CGFloat { min(2.7, quotaDiameter / 10) }
     var capsuleQuotaFontSize: CGFloat { min(17, max(1, compactHeight - 4)) }
     var capsuleActivityFontSize: CGFloat { min(13, max(1, compactHeight - 4)) }
 
-    func fittingActivity(_ thread: ActiveThread?, hasDisclosure: Bool) -> Self {
-        guard !isCapsule else { return self }
+    func fittingActivity(_ thread: ActiveThread?, hasDisclosure: Bool,
+                         preferences: DashboardPreferences = DashboardPreferences()) -> Self {
+        if isCapsule && preferences == DashboardPreferences() { return self }
+        return fittingLayout(rows: thread.map { preferences.exampleRows(for: $0) } ?? [],
+            hasDisclosure: hasDisclosure, preferences: preferences)
+    }
+
+    func fittingLayout(rows: [[String]], hasDisclosure: Bool, preferences: DashboardPreferences) -> Self {
         var fitted = self
-        let maximumWidth = min(320, max(1, min(640, screenFrame.width / 2) - leftWingWidth - gapWidth))
-        fitted.rightWingWidth = NotchedActivityLayout.width(for: thread,
-            hasDisclosure: hasDisclosure, maximum: maximumWidth)
+        fitted.detailHeight = preferences.detailHeight + min(300, max(0, preferences.extraDetailHeight))
+        fitted.listDetailHeight = fitted.detailHeight + 52
+        if let width = preferences.preferredDetailWidth {
+            fitted.customDetailWidth = min(max(320, width), max(320, screenFrame.width - 24))
+        }
+        if let height = preferences.preferredCompactHeight {
+            fitted.compactHeight = min(compactHeight, max(isCapsule ? 12 : 20, height))
+        }
+        if !preferences.showQuota { fitted.leftWingWidth = isCapsule && rows.isEmpty ? 28 : 0 }
+        let maximumWidth = min(320, max(1, min(640, screenFrame.width / 2) - fitted.leftWingWidth - gapWidth))
+        fitted.rightWingWidth = NotchedActivityLayout.width(rows: rows, hasDisclosure: hasDisclosure,
+            maximum: isCapsule ? min(480, screenFrame.width / 2) : maximumWidth, isCapsule: isCapsule)
+        if !rows.isEmpty, let width = preferences.preferredActivityWidth {
+            fitted.rightWingWidth = min(isCapsule ? min(480, screenFrame.width / 2) : maximumWidth, max(28, width))
+        }
+        if !preferences.showQuota && rows.isEmpty && !isCapsule { fitted.rightWingWidth = 28 }
+        let available = 2 * min(fitted.surfaceCenterX - screenFrame.minX, screenFrame.maxX - fitted.surfaceCenterX) - 8
+        fitted.customDetailWidth = min(fitted.customDetailWidth, max(fitted.compactWidth(hasActivity: true), available))
         return fitted
     }
 
@@ -72,12 +94,17 @@ struct NotchGeometry: Equatable {
 
     func quotaCenterXInDetails(hasActivity: Bool) -> CGFloat {
         let quotaOffset = isCapsule ? leftWingWidth / 2 : leftWingWidth - 12 - quotaDiameter / 2
-        return (expandedWidth - compactWidth(hasActivity: hasActivity)) / 2 + quotaOffset
+        return max(16, (expandedWidth - compactWidth(hasActivity: hasActivity)) / 2 + quotaOffset)
+    }
+
+    func toolbarRefreshCenterX(hasActivity: Bool) -> CGFloat {
+        // Keep the power button reachable when the quota is centered or hidden.
+        min(quotaCenterXInDetails(hasActivity: hasActivity), expandedWidth / 2 - 40)
     }
 
     var expandedWidth: CGFloat {
         let detailMinimum = isCapsule ? 320 : leftWingWidth + gapWidth + 112
-        return max(detailMinimum, compactWidth(hasActivity: true))
+        return max(detailMinimum, compactWidth(hasActivity: true), customDetailWidth)
     }
     var envelopeWidth: CGFloat { expandedWidth + 8 }
     var envelopeHeight: CGFloat { compactHeight + listDetailHeight + 8 }

@@ -60,6 +60,24 @@ Para atualizar, feche o Codex Reset pelo botão de desligar que aparece ao passa
 
 Nos MacBooks Intel e nos M1 sem notch, a cápsula compacta fica centralizada e inteira dentro da altura da barra de menus. A porcentagem aparece em texto grande, com uma barra horizontal de progresso separada; não há círculo em volta do número. Com atividade, projeto, modelo e esforço aparecem em uma linha legível. A altura ocupa a barra real da tela, deixando apenas uma pequena margem para manter o contorno arredondado visível. Ela ocupa apenas o espaço da franquia quando não há atividade e cresce na horizontal quando há conversas. Os detalhes se abrem ao passar o mouse. Nos Macs com notch, o visual continua integrado ao recorte; a lateral de projeto, modelo e esforço ajusta a largura ao conteúdo e só reserva espaço para a seta quando ela aparece. O aplicativo detecta o tipo de tela automaticamente. A altura é medida pela área que o macOS reserva no topo da tela, com `NSScreen.frame` e [`NSScreen.visibleFrame`](https://developer.apple.com/documentation/appkit/nsscreen/visibleframe); se a barra estiver oculta, usa `NSStatusBar.system.thickness`. A medida é conferida novamente enquanto o app está aberto. Não depende de uma altura fixa atribuída ao MacBook Pro 2019, ao M1 Air ou a uma arquitetura.
 
+## Monte o seu painel
+
+Abra a **engrenagem à direita**, alinhada com o botão de atualizar. A janela de configurações mostra um desenho do notch e uma lista de campos para arrastar: conversa, projeto, tokens por segundo, modelo/agente, esforço, número de conversas ativas, franquia e resets.
+
+- Arraste para as **duas linhas da direita** ou as **três linhas do painel aberto**. Arraste novamente para mudar a ordem e use **×** para remover. O menu **+** permite adicionar sem arrastar.
+- Por exemplo: **conversa + tokens/s** na primeira linha e **modelo + esforço** na segunda. Também pode esvaziar a direita e manter somente a porcentagem à esquerda.
+- Cada linha de baixo é independente: pode mostrar só o reset extra, só o semanal, tokens, ou a combinação que preferir. Os campos do topo ficam em uma linha em telas sem notch para respeitar a altura da barra de menus.
+- **Tokens/s** é uma estimativa de consumo pelo aumento do total de entrada e saída da conversa, com amostras a cada cinco segundos. Não mede a velocidade de geração. A primeira amostra, uma nova conversa ou a retomada após suspensão aguarda novos dados.
+- O agente principal continua sendo o de maior esforço entre as conversas ativas. A lista de outras conversas e o nome curto do modelo são opcionais.
+- Use os controles de tamanho ou **Ctrl + Option + arrastar** no monitor. Na barra, ajusta a área da direita e a altura do topo; no painel aberto, ajusta a largura e o espaço extra dos detalhes. O recorte da câmera permanece ancorado e o topo respeita a altura disponível no macOS. **Ajustar automaticamente** restaura as medidas automáticas.
+- A janela aparece no Dock enquanto estiver aberta. **Ocultar na barra de menus** e o botão vermelho fecham somente as configurações; o monitor continua funcionando. Reabra pela engrenagem.
+
+### Último reset
+
+O painel mostra **Último reset · há 5h**, com data e horário na ajuda ao passar o mouse. Quando a conta renova a franquia, um ponto verde indica que você ainda não viu a atualização. Nas três primeiras aberturas do painel, aparece **Novo reset**. O aviso continua pendente após reiniciar o app; não desaparece só porque o reset aconteceu de madrugada. Pode desativar o destaque ou remover o campo do layout.
+
+As preferências, as medidas e o horário do último reset ficam salvos somente neste Mac. Os dados de franquia e das conversas não são enviados ao site.
+
 ## Privacidade
 
 **Cada instalação usa a conta local de quem instalou o app.** Os DMGs contêm somente o aplicativo, seu ícone e as instruções de instalação.

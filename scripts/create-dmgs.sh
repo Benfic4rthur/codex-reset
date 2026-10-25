@@ -57,6 +57,14 @@ Ao observar uma renovação da franquia, o app encerra o anúncio vencido,
 consulta a fonte e recalcula a próxima janela com os intervalos históricos do site.
 Porcentagem alta sozinha não confirma reset. Consultas repetidas não reiniciam o prazo.
 
+A engrenagem abre as configurações com um desenho do notch: arraste os campos
+para as duas linhas da direita e as três linhas do painel aberto. Use x para remover.
+O botão de ocultar fecha somente a janela, mantendo o monitor ativo.
+Tokens/s é uma estimativa de consumo de entrada e saída, não velocidade de geração.
+Ctrl + Option + arrastar ajusta as medidas, respeitando a câmera e a barra de menus.
+O último reset da conta aparece no painel e é destacado nas três primeiras aberturas.
+As preferências e o horário do aviso ficam salvos apenas neste Mac.
+
 Esta distribuição ainda não tem assinatura Developer ID nem notarização da Apple.
 O macOS pode bloquear a abertura até você autorizar o aplicativo.
 Após copiar o app para Aplicativos, cole no Terminal:
