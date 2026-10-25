@@ -94,8 +94,8 @@ struct DashboardPreferences: Codable, Equatable {
     func exampleRows(for thread: ActiveThread) -> [[String]] {
         topRows.map { row in row.map { field in
             switch field {
-            case .conversation: return thread.title
-            case .project: return thread.projectName
+            case .conversation: return thread.title.isEmpty ? appLanguage.text("Conversa sem título") : thread.title
+            case .project: return thread.projectName.isEmpty ? appLanguage.text("Recentes") : thread.projectName
             case .model: return compactModelName ? Format.shortModel(thread.model) : Format.model(thread.model)
             case .effort: return Format.effort(thread.effort, language: appLanguage)
             case .tokenRate: return Format.tokenRate(thread.tokenRate, language: appLanguage)

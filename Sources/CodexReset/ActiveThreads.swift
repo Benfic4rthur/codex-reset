@@ -43,8 +43,8 @@ enum ActiveThreadReader {
 
     // Use this variant when the caller needs to distinguish "no active turns"
     // from a missing or unreadable Codex database.
-    static func readThrowing(includeTokenRate: Bool = false) throws -> [ActiveThread] {
-        let home = codexHome
+    static func readThrowing(root: URL? = nil, includeTokenRate: Bool = false) throws -> [ActiveThread] {
+        let home = root ?? codexHome
         let stateURL = home.appendingPathComponent("state_5.sqlite")
         let historyURL = home.appendingPathComponent("thread_history_1.sqlite")
 
@@ -74,6 +74,8 @@ enum ActiveThreadReader {
         sqlite3_finalize(attachStatement)
         guard attachResult == SQLITE_DONE else { throw ReadError.attachFailed }
 
+        let projects = try projectResolver(connection: connection, home: home)
+
         // Only the newest turn for a thread can make it active. Looking for any
         // inProgress turn would count stale turns left behind after a later turn.
         let query = """
@@ -85,22 +87,8 @@ enum ActiveThreadReader {
                 FROM history.thread_turns
             )
             SELECT t.id,
-                   COALESCE(NULLIF(TRIM(t.name), ''), NULLIF(TRIM(t.title), ''), 'Conversa sem título'),
-                   COALESCE(
-                       NULLIF(TRIM(project.name), ''),
-                       (
-                           SELECT NULLIF(TRIM(root_project.name), '')
-                           FROM main.project_roots AS root
-                           JOIN main.projects AS root_project ON root_project.id = root.project_id
-                           WHERE substr(t.cwd, 1, length(root.path)) = root.path
-                             AND (length(t.cwd) = length(root.path)
-                                  OR substr(t.cwd, length(root.path) + 1, 1) = '/')
-                           ORDER BY length(root.path) DESC, root.position ASC,
-                                    root_project.updated_at_ms DESC
-                           LIMIT 1
-                       ),
-                       'Recentes'
-                   ),
+                   COALESCE(NULLIF(TRIM(t.name), ''), NULLIF(TRIM(t.title), ''), ''),
+                   COALESCE(t.project_id, ''),
                    COALESCE(NULLIF(t.model, ''), '—'),
                    COALESCE(NULLIF(t.reasoning_effort, ''), '—'),
                    n.started_at,
@@ -108,10 +96,9 @@ enum ActiveThreadReader {
                              OR t.thread_source = 'subagent'
                              OR t.source LIKE '{"subagent":%'
                         THEN 1 ELSE 0 END,
-                   t.tokens_used, t.rollout_path, n.turn_id
+                   t.tokens_used, t.rollout_path, n.turn_id, t.cwd
             FROM newest_turn AS n
             JOIN main.threads AS t ON t.id = n.thread_id
-            LEFT JOIN main.projects AS project ON project.id = t.project_id
             WHERE n.position = 1 AND n.status = 'inProgress' AND t.archived = 0
             ORDER BY n.started_at DESC, t.id
             """
@@ -129,7 +116,8 @@ enum ActiveThreadReader {
                 threads.append(ActiveThread(
                     id: textColumn(statement, 0),
                     title: textColumn(statement, 1),
-                    projectName: textColumn(statement, 2),
+                    projectName: projects.name(threadID: textColumn(statement, 0),
+                        projectID: textColumn(statement, 2), cwd: textColumn(statement, 10)) ?? "",
                     model: textColumn(statement, 3),
                     effort: textColumn(statement, 4),
                     startedAt: sqlite3_column_type(statement, 5) == SQLITE_NULL
@@ -142,6 +130,35 @@ enum ActiveThreadReader {
                 ))
             case SQLITE_DONE:
                 return includeTokenRate ? tokenReader.read(threads, root: home, at: Date()) : threads
+            default:
+                throw ReadError.queryFailed
+            }
+        }
+    }
+
+    private static func projectResolver(connection: OpaquePointer, home: URL) throws -> ProjectResolver {
+        let query = """
+            SELECT p.id, p.name, r.path
+            FROM main.projects AS p
+            LEFT JOIN main.project_roots AS r ON r.project_id = p.id
+            ORDER BY length(r.path) DESC, r.position ASC, p.updated_at_ms DESC, p.id
+            """
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(connection, query, -1, &statement, nil) == SQLITE_OK, let statement else {
+            throw ReadError.queryFailed
+        }
+        defer { sqlite3_finalize(statement) }
+        var names: [String: String] = [:]
+        var roots: [ProjectResolver.Root] = []
+        while true {
+            switch sqlite3_step(statement) {
+            case SQLITE_ROW:
+                let id = textColumn(statement, 0)
+                names[id] = textColumn(statement, 1)
+                let path = textColumn(statement, 2)
+                if !path.isEmpty { roots.append(ProjectResolver.Root(projectID: id, path: path)) }
+            case SQLITE_DONE:
+                return ProjectResolver(codexHome: home, names: names, roots: roots)
             default:
                 throw ReadError.queryFailed
             }

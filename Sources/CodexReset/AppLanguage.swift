@@ -34,6 +34,8 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 
     static let translations: [String: [String]] = [
+        "Recentes": ["Recents", "Recientes"],
+        "Conversa sem título": ["Untitled chat", "Chat sin título"],
         "Idioma": ["Language", "Idioma"],
         "Configurações — Codex Reset": ["Settings — Codex Reset", "Configuración — Codex Reset"],
         "Monte o seu painel": ["Build your panel", "Diseña tu panel"],

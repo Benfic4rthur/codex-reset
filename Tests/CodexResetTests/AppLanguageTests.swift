@@ -117,4 +117,16 @@ final class AppLanguageTests: XCTestCase {
         }
         XCTAssertEqual(Set(AppLanguage.allCases.map(\.rawValue)), ["pt-BR", "en", "es"])
     }
+
+    func testProjectlessAndUntitledFallbacksFollowLanguageWithoutRenamingARealProject() {
+        let empty = ActiveThread(id: "sample", title: "", projectName: "", model: "test", effort: "high", startedAt: nil, isSubagent: false)
+        var preferences = DashboardPreferences()
+        preferences.topRows = [[.project], [.conversation]]
+        preferences.language = .english
+        XCTAssertEqual(preferences.exampleRows(for: empty), [["Recents"], ["Untitled chat"]])
+        preferences.language = .spanish
+        XCTAssertEqual(preferences.exampleRows(for: empty), [["Recientes"], ["Chat sin título"]])
+        let named = ActiveThread(id: "named", title: "Original title", projectName: "Recentes", model: "test", effort: "high", startedAt: nil, isSubagent: false)
+        XCTAssertEqual(preferences.exampleRows(for: named), [["Recentes"], ["Original title"]])
+    }
 }

@@ -21,6 +21,8 @@
 
 - O idioma escolhido (português, inglês ou espanhol) deve valer para todas as superfícies do app, incluindo notch, detalhes, avisos e configurações, com troca imediata e preferência local. Preserve layouts antigos ao migrar preferências. O nome curto remove somente o prefixo GPT-, preservando versão e família do modelo.
 
+- A identificação do projeto deve acompanhar a associação da conversa no Codex, inclusive em worktrees fora das raízes cadastradas. Prefira project_id válido do banco e depois metadados locais de associação/migração do desktop; reconheça conversas explicitamente sem projeto. Use raízes com limite de diretório e ponteiros Git como fallback, sem inferir apenas pelo nome da pasta. Não retenha outros campos do estado do desktop.
+
 ## Privacidade
 
 - Nunca versione nem distribua chaves, tokens, arquivos .env, autenticação do Codex, bancos locais, logs, certificados privados ou dados de conversas.

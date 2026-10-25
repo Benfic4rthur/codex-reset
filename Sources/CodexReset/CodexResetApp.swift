@@ -122,8 +122,8 @@ final class DashboardStore: ObservableObject {
 
     func text(for field: DashboardField, at now: Date = Date()) -> String? {
         switch field {
-        case .conversation: return heaviestThread?.title
-        case .project: return heaviestThread?.projectName
+        case .conversation: return heaviestThread.map { $0.title.isEmpty ? tr("Conversa sem título") : $0.title }
+        case .project: return heaviestThread.map { $0.projectName.isEmpty ? tr("Recentes") : $0.projectName }
         case .model: return heaviestThread.map { preferences.compactModelName ? Format.shortModel($0.model) : Format.model($0.model) }
         case .effort: return heaviestThread.map { Format.effort($0.effort, language: language) }
         case .tokenRate: return Format.tokenRate(heaviestThread?.tokenRate, language: language)
@@ -761,7 +761,7 @@ private struct CenteredDetailView: View {
                             VStack(spacing: 3) {
                                 ForEach(store.rootThreads.dropFirst()) { thread in
                                     HStack {
-                                        Text(thread.title).fontWeight(.medium).truncationMode(.tail)
+                                        Text(thread.title.isEmpty ? store.tr("Conversa sem título") : thread.title).fontWeight(.medium).truncationMode(.tail)
                                         Spacer(minLength: 8)
                                         Text(Format.model(thread.model) + " · " + Format.effort(thread.effort, language: store.language))
                                     }
