@@ -11,9 +11,16 @@ struct ActiveThread: Identifiable, Equatable {
     let isSubagent: Bool
     var tokensUsed: Int64? = nil
     var tokenRate: Double? = nil
+    var outputTokenRate: Double? = nil
+    var inputTokenRate: Double? = nil
+    var cachedInputTokenRate: Double? = nil
+    var tokenRateSampledAt: Date? = nil
+    var rolloutURL: URL? = nil
+    var turnID: String? = nil
 }
 
 enum ActiveThreadReader {
+    private static let tokenReader = TokenUsageReader()
     enum ReadError: LocalizedError {
         case databaseUnavailable
         case openFailed
@@ -36,7 +43,7 @@ enum ActiveThreadReader {
 
     // Use this variant when the caller needs to distinguish "no active turns"
     // from a missing or unreadable Codex database.
-    static func readThrowing() throws -> [ActiveThread] {
+    static func readThrowing(includeTokenRate: Bool = false) throws -> [ActiveThread] {
         let home = codexHome
         let stateURL = home.appendingPathComponent("state_5.sqlite")
         let historyURL = home.appendingPathComponent("thread_history_1.sqlite")
@@ -71,7 +78,7 @@ enum ActiveThreadReader {
         // inProgress turn would count stale turns left behind after a later turn.
         let query = """
             WITH newest_turn AS (
-                SELECT thread_id, status, started_at,
+                SELECT thread_id, turn_id, status, started_at,
                        ROW_NUMBER() OVER (
                            PARTITION BY thread_id ORDER BY rollout_ordinal DESC
                        ) AS position
@@ -101,7 +108,7 @@ enum ActiveThreadReader {
                              OR t.thread_source = 'subagent'
                              OR t.source LIKE '{"subagent":%'
                         THEN 1 ELSE 0 END,
-                   t.tokens_used
+                   t.tokens_used, t.rollout_path, n.turn_id
             FROM newest_turn AS n
             JOIN main.threads AS t ON t.id = n.thread_id
             LEFT JOIN main.projects AS project ON project.id = t.project_id
@@ -129,10 +136,12 @@ enum ActiveThreadReader {
                         ? nil
                         : Date(timeIntervalSince1970: TimeInterval(sqlite3_column_int64(statement, 5))),
                     isSubagent: sqlite3_column_int(statement, 6) != 0,
-                    tokensUsed: sqlite3_column_type(statement, 7) == SQLITE_NULL ? nil : sqlite3_column_int64(statement, 7)
+                    tokensUsed: sqlite3_column_type(statement, 7) == SQLITE_NULL ? nil : sqlite3_column_int64(statement, 7),
+                    rolloutURL: URL(fileURLWithPath: textColumn(statement, 8)),
+                    turnID: textColumn(statement, 9)
                 ))
             case SQLITE_DONE:
-                return threads
+                return includeTokenRate ? tokenReader.read(threads, root: home, at: Date()) : threads
             default:
                 throw ReadError.queryFailed
             }

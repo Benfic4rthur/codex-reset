@@ -42,6 +42,36 @@ struct ScheduledResetAnnouncement: Sendable {
     let sourceURL: URL
 }
 
+struct ResetPost: Sendable, Equatable {
+    let date: Date
+    let text: String
+    let url: URL
+    var id: String { url.absoluteString }
+    var links: [URL] {
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else { return [] }
+        var seen: Set<URL> = []
+        return detector.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap { match in
+            guard let url = match.url, ["https", "http"].contains(url.scheme?.lowercased() ?? ""),
+                  seen.insert(url).inserted else { return nil }
+            return url
+        }
+    }
+    var readableText: String {
+        links.reduce(text) { $0.replacingOccurrences(of: $1.absoluteString, with: "") }
+            .replacingOccurrences(of: #"[ \t]{2,}"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    init?(date: Date, text: String, url: URL?, author: String?) {
+        guard author == "thsottiaux", let url, url.scheme == "https", url.host?.lowercased() == "x.com",
+              url.path.hasPrefix("/thsottiaux/status/"),
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        self.date = date
+        self.text = text
+        self.url = url
+    }
+}
+
 struct ResetForecast: Sendable {
     /// Latest reset observed by the source or in this account.
     let latest: Date
@@ -62,6 +92,7 @@ struct ResetForecast: Sendable {
     let sourceURL: URL
     /// Source intervals only; a personal renewal never changes the sample.
     var historicalIntervals: [TimeInterval] = []
+    var latestAnnouncement: ResetPost? = nil
 
     func reconcilingQuotaReset(at observedAt: Date?) -> ResetForecast {
         let anchor = max(latest, observedAt ?? latest)
@@ -73,7 +104,7 @@ struct ResetForecast: Sendable {
             estimatedWindow: anchor == latest ? estimatedWindow
                 : ResetForecastService.estimatedWindow(since: anchor, intervals: historicalIntervals),
             sampleSize: sampleSize, fetchedAt: fetchedAt, scheduledReset: pending,
-            sourceURL: sourceURL, historicalIntervals: historicalIntervals)
+            sourceURL: sourceURL, historicalIntervals: historicalIntervals, latestAnnouncement: latestAnnouncement)
     }
 
     func presentation(at now: Date) -> (headline: String, caption: String) {
@@ -158,6 +189,13 @@ enum ResetForecastService {
             probability = nil
         }
 
+        var posts = candidates.compactMap { record in
+            ResetPost(date: record.announcedAt, text: record.text ?? "", url: record.source?.url, author: record.source?.author)
+        }
+        if let record = status.data.scheduledReset,
+           let post = ResetPost(date: record.announcedAt, text: record.text, url: record.source.url, author: record.source.author) {
+            posts.append(post)
+        }
         return ResetForecast(
             latest: latest,
             probabilityNext7Days: probability,
@@ -166,7 +204,8 @@ enum ResetForecastService {
             fetchedAt: status.meta.generatedAt,
             scheduledReset: verifiedAnnouncement(status.data.scheduledReset),
             sourceURL: sourceURL,
-            historicalIntervals: gaps
+            historicalIntervals: gaps,
+            latestAnnouncement: posts.max { $0.date < $1.date }
         )
     }
 
@@ -307,6 +346,8 @@ private struct ResetRecord: Decodable {
     let id: String
     let resetType: String
     let announcedAt: Date
+    let text: String?
+    let source: ResetSource?
 }
 
 private struct ResetSource: Decodable {

@@ -87,6 +87,8 @@ final class DashboardStore: ObservableObject {
     @Published private(set) var forecast: ResetForecast?
     @Published private(set) var forecastError: String?
     @Published private(set) var isRefreshingForecast = false
+    @Published var showsAnnouncement = false
+    @Published var translatedPosts: [String: String] = [:]
     @Published var listExpanded = false
     @Published var showHoverDetails = false
 
@@ -109,16 +111,29 @@ final class DashboardStore: ObservableObject {
         case .project: return heaviestThread?.projectName
         case .model: return heaviestThread.map { preferences.compactModelName ? Format.shortModel($0.model) : Format.model($0.model) }
         case .effort: return heaviestThread.map { Format.effort($0.effort) }
-        case .tokenRate: return heaviestThread?.tokenRate.map { "~\(Int($0.rounded())) tok/s" } ?? "— tok/s"
+        case .tokenRate: return Format.tokenRate(heaviestThread?.tokenRate)
+        case .outputTokenRate: return Format.tokenRate(heaviestThread?.outputTokenRate)
         case .activeCount: return "\(rootThreads.count) ativa\(rootThreads.count == 1 ? "" : "s")"
         case .quota: return usage?.displayedWindow.map { "\(Int($0.remainingPercent.rounded()))%" } ?? "—%"
         case .extraReset: return forecast?.presentation(at: now).headline.replacingOccurrences(of: "\n", with: " ")
             ?? (isRefreshingForecast || forecastError == nil ? "Buscando previsão…" : "Previsão indisponível")
         case .weeklyReset: return usage?.weeklyWindow?.resetsAt.flatMap { ResetCountdown.remaining(until: $0, at: now) }.map { "Em " + $0 } ?? "Aguardando atualização"
         case .lastReset: return lastResetNotice.map { $0.elapsed(at: now) } ?? "Ainda não observado"
+        case .tiboAnnouncement: return "Tibo"
         }
     }
     var hasUnseenReset: Bool { preferences.highlightNewReset && lastResetNotice?.isUnseen == true }
+
+    func tokenRateDescription(for field: DashboardField) -> String {
+        let description = field == .outputTokenRate
+            ? "Somente tokens de saída, incluindo raciocínio. Média entre atualizações, não velocidade instantânea."
+            : "Entrada + saída, incluindo contexto em cache. Não equivale à franquia debitada nem à velocidade de geração."
+        guard let thread = heaviestThread, let date = thread.tokenRateSampledAt else {
+            return description + " O Codex ainda não informou duas amostras recentes."
+        }
+        return description + " Amostra de " + date.formatted(date: .omitted, time: .standard)
+            + (field == .tokenRate ? ". Cache incluído: " + Format.tokenRate(thread.cachedInputTokenRate) : "")
+    }
 
     private var threadsTimer: Timer?
     private var usageTimer: Timer?
@@ -130,7 +145,6 @@ final class DashboardStore: ObservableObject {
     private var observedQuotaReset: Date?
     private let forecastLoader: @Sendable () async throws -> ResetForecast
     private let defaults: UserDefaults
-    private var tokenSampler = TokenRateSampler()
 
     init(defaults: UserDefaults = .standard, forecastLoader: @escaping @Sendable () async throws -> ResetForecast = {
         try await ResetForecastService.fetch()
@@ -207,15 +221,16 @@ final class DashboardStore: ObservableObject {
     func refreshThreads() {
         guard !threadsInFlight else { return }
         threadsInFlight = true
+        let fields = Array(preferences.topRows.joined()) + Array(preferences.detailRows.joined())
+        let includeTokens = fields.contains(.tokenRate) || fields.contains(.outputTokenRate)
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            let result = Result { try ActiveThreadReader.readThrowing() }
+            let result = Result { try ActiveThreadReader.readThrowing(includeTokenRate: includeTokens) }
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 self.threadsInFlight = false
                 switch result {
                 case .success(let threads):
-                    let sampled = self.tokenSampler.sample(threads, at: Date())
-                    if self.activeThreads != sampled { self.activeThreads = sampled }
+                    if self.activeThreads != threads { self.activeThreads = threads }
                     if !self.canExpandConversations { self.listExpanded = false }
                     self.threadsError = nil
                 case .failure(let error):
@@ -430,7 +445,7 @@ private final class NotchWindow: NSObject {
     private func updatePointer() {
         let point = panel.convertPoint(fromScreen: NSEvent.mouseLocation)
         let detailHeight = store.listExpanded ? geometry.listDetailHeight : geometry.detailHeight
-        let hovering = geometry.topContains(point, hasActivity: store.hasTopContent)
+        let hovering = store.showsAnnouncement || geometry.topContains(point, hasActivity: store.hasTopContent)
             || ((store.showHoverDetails || store.listExpanded)
                 && geometry.detailContains(point, height: detailHeight))
         if hovering != pointerInside {
@@ -672,9 +687,13 @@ private struct ThreadCompactView: View {
     }
 
     private func cellView(_ cell: DashboardCell, size: CGFloat) -> some View {
-        Text(cell.text).font(.system(size: size, weight: .medium)).lineLimit(1)
+        Group {
+            if cell.field == .tiboAnnouncement { TiboAnnouncementView(store: store, size: min(20, size + 6)) }
+            else { Text(cell.text).font(.system(size: size, weight: .medium)).lineLimit(1)
+                .help(cell.field == .tokenRate || cell.field == .outputTokenRate ? store.tokenRateDescription(for: cell.field) : cell.text) }
+        }
             .truncationMode(.tail).minimumScaleFactor(0.75)
-            .foregroundStyle(cell.field == .tokenRate || cell.field == .effort ? Visual.accent : Visual.primary)
+            .foregroundStyle(cell.field == .tokenRate || cell.field == .outputTokenRate || cell.field == .effort ? Visual.accent : Visual.primary)
             .layoutPriority(cell.field == .conversation || cell.field == .project ? 0 : 1)
     }
 
@@ -704,9 +723,15 @@ private struct CenteredDetailView: View {
             VStack(spacing: 8) {
                 ForEach(Array(store.preferences.detailRows.enumerated()), id: \.offset) { _, fields in
                     if !fields.isEmpty {
-                        HStack(alignment: .top, spacing: 12) {
-                            ForEach(fields) { field in detailField(field, at: context.date) }
+                        HStack(alignment: .center, spacing: 12) {
+                            ForEach(fields) { field in
+                                detailField(field, at: context.date)
+                                    .frame(width: max(1, (contentWidth - CGFloat(fields.count - 1) * 12) / CGFloat(fields.count)),
+                                        height: DashboardPreferences.detailRowHeight(fields) - (fields.contains(.lastReset) ? 4 : 0),
+                                        alignment: .center)
+                            }
                         }
+                        .padding(.top, fields.contains(.lastReset) ? 4 : 0)
                         .frame(height: DashboardPreferences.detailRowHeight(fields))
                     }
                 }
@@ -764,14 +789,15 @@ private struct CenteredDetailView: View {
 
     @ViewBuilder
     private func detailField(_ field: DashboardField, at now: Date) -> some View {
-        if field == .lastReset {
+        if field == .tiboAnnouncement {
+            TiboAnnouncementView(store: store).frame(maxWidth: .infinity)
+        } else if field == .lastReset {
             HStack(spacing: 5) {
                 Image(systemName: store.showNewResetInPanel ? "sparkle" : "clock.arrow.circlepath")
                 Text("\(store.showNewResetInPanel ? "Novo reset" : "Último reset") · \(store.text(for: field, at: now) ?? "—")")
             }
             .font(.system(size: 10, weight: store.showNewResetInPanel ? .semibold : .regular))
             .foregroundStyle(store.showNewResetInPanel ? Visual.accent : Visual.secondary)
-            .padding(.top, 4)
             .help(store.lastResetNotice.map { "Franquia renovada em " + $0.date.formatted(date: .abbreviated, time: .shortened) } ?? "Aguardando dados da conta")
         } else {
             VStack(spacing: 3) {
@@ -781,6 +807,9 @@ private struct CenteredDetailView: View {
                     .frame(maxWidth: .infinity, minHeight: field == .extraReset || field == .weeklyReset ? 32 : 18)
                 if field == .extraReset {
                     Text(extraCaption(at: now)).font(.system(size: 10)).foregroundStyle(Visual.secondary).lineLimit(1)
+                } else if field == .tokenRate || field == .outputTokenRate {
+                    Text(field == .tokenRate ? "Entrada + saída · cache incluído" : "Média de saída")
+                        .font(.system(size: 9)).foregroundStyle(Visual.secondary).lineLimit(1).minimumScaleFactor(0.75)
                 } else if field == .weeklyReset {
                     Text("Informado pelo Codex").font(.system(size: 10)).foregroundStyle(Visual.secondary).lineLimit(1)
                 }
@@ -864,6 +893,13 @@ private extension View {
 }
 
 enum Format {
+    static func tokenRate(_ value: Double?) -> String {
+        guard let value, value.isFinite, value >= 0 else { return "— tok/s" }
+        if value < 1 { return "<1 tok/s" }
+        if value >= 1_000_000 { return "~" + String(format: "%.1fM", value / 1_000_000).replacingOccurrences(of: ".", with: ",") + " tok/s" }
+        if value >= 1_000 { return "~" + String(format: "%.1fk", value / 1_000).replacingOccurrences(of: ".", with: ",") + " tok/s" }
+        return "~\(Int(min(value.rounded(), 999_999_999))) tok/s"
+    }
     static func shortModel(_ value: String) -> String {
         let pieces = value.split(separator: "-")
         return pieces.count > 1 && pieces[0].lowercased() == "gpt" ? String(pieces[1]) : value

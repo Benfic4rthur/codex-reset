@@ -13,9 +13,11 @@
 - Não sobrescreva uma versão publicada; publique uma versão nova.
 
 - A engrenagem à direita deve espelhar a posição do botão de atualizar. As configurações permitem arrastar campos para duas linhas no lado direito e três linhas de detalhes, com preferências locais persistentes. A janela aparece no Dock enquanto aberta; fechar ou ocultar a janela não encerra o monitor.
-- Tokens por segundo é consumo estimado pela diferença do total de tokens, incluindo entrada e saída, com amostras de cinco segundos; não apresente como velocidade de geração. Reinicie a amostra ao trocar de turno ou após suspensão.
+- Separe Total processado/s (entrada + saída, cache já incluído na entrada) de Saída/s. Use os contadores e horários de eventos locais token_count, consultados somente quando um desses campos estiver ativado. Não apresente esses totais como franquia debitada nem conte cache duas vezes. Não zere a taxa entre consultas sem novos dados nem apresente como medição instantânea. Ignore eventos de outra execução e amostras antigas; indique ausência de dados em vez de inventar zero.
 - O último reset da conta deve exibir horário e tempo decorrido. Guarde somente a data e o número de apresentações do aviso; destaque nas três primeiras aberturas e mostre o ponto verde até a primeira.
 - Ajustes manuais e Ctrl + Option + arrastar devem preservar a câmera ancorada e a altura disponível da barra de menus. Ofereça restauração das medidas automáticas.
+
+- O campo Anúncio do Tibo cobre somente anúncios de reset de @thsottiaux na fonte existente. Apresente links clicáveis, avatar e tradução do macOS, sem usar a franquia do Codex nem ler o conteúdo das conversas para isso. Preserve o desenho do editor centralizado, com uma peça preta contínua. Acomode as configurações sem rolagem interna, usando abas em telas menores. Centralize cada campo de uma linha em colunas de mesma largura; mantenha os links do cartão em uma fileira compacta.
 
 ## Privacidade
 

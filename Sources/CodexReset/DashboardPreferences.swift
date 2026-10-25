@@ -1,13 +1,14 @@
 import Foundation
 
 enum DashboardField: String, CaseIterable, Codable, Identifiable {
-    case conversation, project, tokenRate, model, effort, activeCount, quota, extraReset, weeklyReset, lastReset
+    case conversation, project, tokenRate, outputTokenRate, model, effort, activeCount, quota, extraReset, weeklyReset, lastReset, tiboAnnouncement
     var id: String { rawValue }
     var label: String {
         switch self {
         case .conversation: return "Conversa"
         case .project: return "Projeto"
-        case .tokenRate: return "Tokens por segundo"
+        case .tokenRate: return "Total processado/s"
+        case .outputTokenRate: return "Saída/s"
         case .model: return "Modelo / agente"
         case .effort: return "Esforço"
         case .activeCount: return "Conversas ativas"
@@ -15,6 +16,7 @@ enum DashboardField: String, CaseIterable, Codable, Identifiable {
         case .extraReset: return "Reset extra"
         case .weeklyReset: return "Reset semanal"
         case .lastReset: return "Último reset"
+        case .tiboAnnouncement: return "Anúncio do Tibo"
         }
     }
 }
@@ -36,6 +38,7 @@ struct DashboardPreferences: Codable, Equatable {
     var showConversations = true
     var highlightNewReset = true
     var compactModelName = false
+    var classicEditor: Bool?
     var preferredActivityWidth: Double?
     var preferredDetailWidth: Double?
     var preferredCompactHeight: Double?
@@ -74,7 +77,9 @@ struct DashboardPreferences: Codable, Equatable {
     }
 
     static func detailRowHeight(_ row: [DashboardField]) -> Double {
-        row.contains(.extraReset) || row.contains(.weeklyReset) ? 60 : row == [.lastReset] ? 20 : 36
+        let base = row.contains(.extraReset) || row.contains(.weeklyReset) ? 60.0
+            : row == [.lastReset] ? 16 : row.contains(.tokenRate) || row.contains(.outputTokenRate) ? 50 : 36
+        return base + (row.contains(.lastReset) ? 4 : 0)
     }
 
     var detailHeight: Double {
@@ -91,7 +96,8 @@ struct DashboardPreferences: Codable, Equatable {
             case .project: return thread.projectName
             case .model: return compactModelName ? Format.shortModel(thread.model) : Format.model(thread.model)
             case .effort: return Format.effort(thread.effort)
-            case .tokenRate: return thread.tokenRate.map { "~\(Int($0.rounded())) tok/s" } ?? "— tok/s"
+            case .tokenRate: return Format.tokenRate(thread.tokenRate)
+            case .outputTokenRate: return Format.tokenRate(thread.outputTokenRate)
             default: return field.label
             }
         }}.filter { !$0.isEmpty }
@@ -110,26 +116,5 @@ struct LastResetNotice: Codable, Equatable {
         if seconds < 3_600 { return "há \(Int(seconds / 60))m" }
         if seconds < 86_400 { return "há \(Int(seconds / 3_600))h" }
         return "há \(Int(seconds / 86_400))d \(Int(seconds / 3_600) % 24)h"
-    }
-}
-
-/// Cumulative input/output consumption, sampled every five seconds, not generation speed.
-struct TokenRateSampler {
-    private var previous: [String: (tokens: Int64, turn: Date?, time: Date)] = [:]
-    mutating func sample(_ threads: [ActiveThread], at now: Date) -> [ActiveThread] {
-        var next: [String: (tokens: Int64, turn: Date?, time: Date)] = [:]
-        let result = threads.map { thread in
-            var thread = thread
-            if let tokens = thread.tokensUsed {
-                if let old = previous[thread.id], old.turn == thread.startedAt,
-                   now > old.time, now.timeIntervalSince(old.time) <= 15, tokens >= old.tokens {
-                    thread.tokenRate = Double(tokens - old.tokens) / now.timeIntervalSince(old.time)
-                }
-                next[thread.id] = (tokens, thread.startedAt, now)
-            }
-            return thread
-        }
-        previous = next
-        return result
     }
 }

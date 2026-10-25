@@ -78,18 +78,6 @@ final class DisplayCustomizationTests: XCTestCase {
         XCTAssertEqual(store.lastResetNotice?.elapsed(at: now), "há 3d 0h")
     }
 
-    func testRateUsesCounterDeltasAndNeverBridgesTurnsOrSuspension() {
-        var sampler = TokenRateSampler()
-        XCTAssertNil(sampler.sample([thread(tokens: 100)], at: now).first?.tokenRate)
-        XCTAssertEqual(sampler.sample([thread(tokens: 250)], at: now.addingTimeInterval(5)).first?.tokenRate, 30)
-        XCTAssertEqual(sampler.sample([thread(tokens: 250)], at: now.addingTimeInterval(10)).first?.tokenRate, 0)
-        XCTAssertNil(sampler.sample([thread(tokens: 100)], at: now.addingTimeInterval(15)).first?.tokenRate)
-        XCTAssertNil(sampler.sample([thread(tokens: 200, turn: now)], at: now.addingTimeInterval(20)).first?.tokenRate)
-        XCTAssertNil(sampler.sample([thread(tokens: 400, turn: now)], at: now.addingTimeInterval(80)).first?.tokenRate)
-        _ = sampler.sample([], at: now.addingTimeInterval(85))
-        XCTAssertNil(sampler.sample([thread(tokens: 500, turn: now)], at: now.addingTimeInterval(90)).first?.tokenRate)
-    }
-
     func testDragMovesReordersAndCopiesFromPaletteWithoutDuplicatingAFieldWithinARegion() {
         var preferences = DashboardPreferences()
         preferences.topRows = [[.conversation, .tokenRate], [.model, .effort]]

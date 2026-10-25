@@ -10,12 +10,13 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     func show() {
         if window == nil {
-            let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 620, height: 760),
+            let height = min(1130, max(680, (NSScreen.main?.visibleFrame.height ?? 1000) - 50))
+            let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 980, height: height),
                 styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
             window.title = "Configurações — Codex Reset"
             window.isReleasedWhenClosed = false
             window.delegate = self
-            window.contentView = NSHostingView(rootView: DashboardSettingsView(store: store) { [weak self] in self?.hide() })
+            window.contentView = NSHostingView(rootView: DashboardSettingsView(store: store, height: height) { [weak self] in self?.hide() })
             window.center()
             self.window = window
         }
@@ -32,6 +33,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
 private struct DashboardSettingsView: View {
     @ObservedObject var store: DashboardStore
+    let height: CGFloat
     let hide: () -> Void
     @State private var dragged: DashboardField?
     @State private var source: LayoutPosition?
@@ -46,8 +48,30 @@ private struct DashboardSettingsView: View {
                 }
                 Spacer()
             }.padding(20)
-            ScrollView {
+            ViewThatFits(in: .vertical) {
                 VStack(alignment: .leading, spacing: 18) {
+                    layoutSection
+                    adjustmentsSection
+                }
+                .padding(.horizontal, 20).padding(.bottom, 20)
+                .fixedSize(horizontal: false, vertical: true)
+
+                TabView {
+                    layoutSection.padding(20).tabItem { Text("Montar painel") }
+                    adjustmentsSection.padding(20).tabItem { Text("Tamanho e opções") }
+                }
+            }
+            Divider()
+            HStack {
+                Text("Salvo automaticamente neste Mac.").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("Ocultar na barra de menus", action: hide).keyboardShortcut(.defaultAction)
+            }.padding(16)
+        }.frame(width: 980, height: height)
+    }
+
+    private var layoutSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
                     HStack {
                         Button("Padrão") { store.preferences = DashboardPreferences() }
                         Button("Só porcentagem") { store.preferences.showQuota = true; store.preferences.topRows = [[], []] }
@@ -59,7 +83,19 @@ private struct DashboardSettingsView: View {
                             store.preferences.topRows = [[.conversation, .tokenRate], [.model, .effort]]
                         }
                     }
+                    HStack {
+                        Text("Arraste os campos para o desenho da tela").font(.headline)
+                        Spacer()
+                        Button(store.preferences.classicEditor == true ? "Testar desenho novo" : "Editor anterior") {
+                            store.preferences.classicEditor = store.preferences.classicEditor != true
+                        }
+                    }
                     layoutEditor
+        }
+    }
+
+    private var adjustmentsSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text("Ajuste de tamanho").font(.headline)
@@ -88,20 +124,104 @@ private struct DashboardSettingsView: View {
                         Toggle("Nome curto do modelo (ex.: 6.1)", isOn: $store.preferences.compactModelName)
                         Toggle("Destacar novo reset nas três primeiras aberturas", isOn: $store.preferences.highlightNewReset)
                     }
-                    Text("Tokens/s é uma estimativa do consumo de entrada e saída, atualizada a cada 5 segundos. Não mede a velocidade de geração. O agente principal é o de maior esforço entre as conversas ativas.")
+                    Text("Total processado/s soma entrada e saída, incluindo o contexto em cache. Saída/s mostra só a saída. São médias entre registros do Codex, não velocidade instantânea nem franquia debitada; sem amostras recentes, mostram um traço. O agente principal é o de maior esforço entre as conversas ativas.")
                         .font(.caption).foregroundStyle(.secondary)
-                }.padding(.horizontal, 20).padding(.bottom, 20)
-            }
-            Divider()
-            HStack {
-                Text("Salvo automaticamente neste Mac.").font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                Button("Ocultar na barra de menus", action: hide).keyboardShortcut(.defaultAction)
-            }.padding(16)
-        }.frame(width: 620, height: 760)
+        }
     }
 
+    @ViewBuilder
     private var layoutEditor: some View {
+        if store.preferences.classicEditor == true {
+            classicLayoutEditor.frame(maxWidth: 680).frame(maxWidth: .infinity)
+        } else {
+            HStack(alignment: .top, spacing: 20) {
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("Informações disponíveis").font(.headline)
+                    Text("Arraste uma peça").font(.caption).foregroundStyle(.secondary)
+                    ForEach(DashboardField.allCases) { field in
+                        HStack {
+                            Image(systemName: "line.3.horizontal").foregroundStyle(.secondary)
+                            Text(field.label).font(.system(size: 11, weight: .medium))
+                            Spacer(minLength: 0)
+                        }
+                        .padding(9).background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+                        .onDrag { dragged = field; source = nil; return NSItemProvider(object: field.rawValue as NSString) }
+                    }
+                }.frame(width: 165)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 0) {
+                        Text("ESQUERDA").frame(width: 280)
+                        Text("CÂMERA FIXA").frame(width: 100)
+                        Text("DIREITA · DUAS LINHAS").frame(width: 280)
+                    }
+                    .font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    ZStack(alignment: .top) {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(LinearGradient(colors: [Color(red: 0.24, green: 0.31, blue: 0.43), Color(red: 0.12, green: 0.17, blue: 0.26)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        VStack {
+                            HStack(spacing: 10) {
+                                Image(systemName: "apple.logo")
+                                Spacer()
+                                Image(systemName: "wifi")
+                                Text("09:41")
+                            }
+                            .font(.system(size: 10)).foregroundStyle(.white.opacity(0.8))
+                            .padding(.horizontal, 14).frame(height: 24).background(.white.opacity(0.08))
+                            Spacer()
+                            RoundedRectangle(cornerRadius: 7).fill(.white.opacity(0.06))
+                                .frame(width: 200, height: 110).overlay(alignment: .topLeading) {
+                                    HStack(spacing: 4) {
+                                        ForEach(0..<3) { _ in Circle().fill(.white.opacity(0.2)).frame(width: 5, height: 5) }
+                                    }.padding(10)
+                                }.padding(.trailing, 370).padding(.bottom, 28)
+                        }
+                        VStack(spacing: 0) {
+                            HStack(spacing: 0) {
+                                VStack(spacing: 5) {
+                                    Text(store.preferences.showQuota ? store.text(for: .quota) ?? "—%" : "")
+                                        .font(.system(size: 22, weight: .semibold)).foregroundStyle(.mint)
+                                    if store.preferences.showQuota { Capsule().fill(.mint).frame(width: 30, height: 3) }
+                                }.frame(width: 280, height: 84)
+                                VStack(spacing: 8) {
+                                    Circle().fill(RadialGradient(colors: [.blue.opacity(0.55), .gray.opacity(0.2), .black], center: .center, startRadius: 1, endRadius: 7))
+                                        .frame(width: 14, height: 14).overlay(Circle().stroke(.white.opacity(0.12)))
+                                    Text("Câmera do Mac").font(.system(size: 9)).foregroundStyle(.white.opacity(0.4))
+                                }.frame(width: 100, height: 84)
+                                VStack(spacing: 4) {
+                                    layoutRow(.top, row: 0)
+                                    layoutRow(.top, row: 1)
+                                }.padding(.horizontal, 8).frame(width: 280, height: 84)
+                            }.frame(width: 660)
+                            VStack(spacing: 9) {
+                                HStack {
+                                    Image(systemName: "arrow.clockwise")
+                                    Spacer()
+                                    Image(systemName: "power")
+                                    Spacer()
+                                    Image(systemName: "gearshape")
+                                }.font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).padding(.horizontal, 20)
+                                Text("PAINEL ABERTO · TRÊS LINHAS").font(.system(size: 8, weight: .semibold)).foregroundStyle(.white.opacity(0.4))
+                                ForEach(0..<3) { row in layoutRow(.details, row: row) }
+                            }.padding(16).frame(width: 660)
+                        }
+                        .frame(width: 660, height: 292, alignment: .top)
+                        .background(.black, in: UnevenRoundedRectangle(bottomLeadingRadius: 18, bottomTrailingRadius: 18))
+                        .shadow(color: .black.opacity(0.35), radius: 10, y: 8)
+                        .environment(\.colorScheme, .dark)
+                    }
+                    .frame(height: 350).clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.12)))
+                    Text("À esquerda fica a franquia. No meio, a câmera. À direita, as informações que você montar. A parte de baixo aparece quando o painel abre.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text("Mova as peças para mudar a ordem, use × para remover e + para adicionar sem arrastar. Em telas sem notch, as linhas de cima ficam em uma linha na barra de menus.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }.frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var classicLayoutEditor: some View {
         HStack(alignment: .top, spacing: 14) {
             VStack(alignment: .leading, spacing: 7) {
                 Text("Campos").font(.headline)

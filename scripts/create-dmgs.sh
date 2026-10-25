@@ -60,10 +60,15 @@ Porcentagem alta sozinha não confirma reset. Consultas repetidas não reiniciam
 A engrenagem abre as configurações com um desenho do notch: arraste os campos
 para as duas linhas da direita e as três linhas do painel aberto. Use x para remover.
 O botão de ocultar fecha somente a janela, mantendo o monitor ativo.
-Tokens/s é uma estimativa de consumo de entrada e saída, não velocidade de geração.
+Total processado/s soma entrada e saída, incluindo cache; Saída/s mostra só saída.
+São médias entre as últimas atualizações do Codex, não franquia debitada.
+Não é uma medição instantânea; sem amostras recentes, mostra um traço.
 Ctrl + Option + arrastar ajusta as medidas, respeitando a câmera e a barra de menus.
 O último reset da conta aparece no painel e é destacado nas três primeiras aberturas.
 As preferências e o horário do aviso ficam salvos apenas neste Mac.
+O campo Anúncio do Tibo abre o último anúncio de reset com links clicáveis.
+A tradução usa o macOS 15 ou posterior e pode solicitar download de idiomas.
+Não utiliza a franquia do Codex para traduzir.
 
 Esta distribuição ainda não tem assinatura Developer ID nem notarização da Apple.
 O macOS pode bloquear a abertura até você autorizar o aplicativo.

@@ -62,15 +62,21 @@ Nos MacBooks Intel e nos M1 sem notch, a cápsula compacta fica centralizada e i
 
 ## Monte o seu painel
 
-Abra a **engrenagem à direita**, alinhada com o botão de atualizar. A janela de configurações mostra um desenho do notch e uma lista de campos para arrastar: conversa, projeto, tokens por segundo, modelo/agente, esforço, número de conversas ativas, franquia e resets.
+Abra a **engrenagem à direita**, alinhada com o botão de atualizar. A janela de configurações mostra uma tela de Mac, com o conjunto preto centralizado e as áreas esquerda, câmera e direita identificadas. O botão **Editor anterior** permite comparar com a disposição compacta. A janela acomoda o conteúdo sem rolagem interna; em telas menores, usa abas para as medidas e opções. Os campos para arrastar incluem: conversa, projeto, tokens por segundo, modelo/agente, esforço, número de conversas ativas, franquia e resets.
 
 - Arraste para as **duas linhas da direita** ou as **três linhas do painel aberto**. Arraste novamente para mudar a ordem e use **×** para remover. O menu **+** permite adicionar sem arrastar.
 - Por exemplo: **conversa + tokens/s** na primeira linha e **modelo + esforço** na segunda. Também pode esvaziar a direita e manter somente a porcentagem à esquerda.
-- Cada linha de baixo é independente: pode mostrar só o reset extra, só o semanal, tokens, ou a combinação que preferir. Os campos do topo ficam em uma linha em telas sem notch para respeitar a altura da barra de menus.
-- **Tokens/s** é uma estimativa de consumo pelo aumento do total de entrada e saída da conversa, com amostras a cada cinco segundos. Não mede a velocidade de geração. A primeira amostra, uma nova conversa ou a retomada após suspensão aguarda novos dados.
+- Cada linha de baixo divide o espaço igualmente entre os campos, com cada um centralizado na sua coluna. As linhas são independentes: pode mostrar só o reset extra, só o semanal, tokens, ou a combinação que preferir. Os campos do topo ficam em uma linha em telas sem notch para respeitar a altura da barra de menus.
+- **Total processado/s** soma entrada e saída, incluindo o contexto reutilizado do cache. **Saída/s** mostra somente os tokens de saída, incluindo raciocínio. São médias entre as últimas atualizações registradas pelo Codex, consultadas localmente a cada cinco segundos; não medem velocidade instantânea nem franquia debitada. O cache já faz parte da entrada e não é contado duas vezes. Sem duas amostras recentes da mesma execução, mostram um traço. A ajuda informa o horário e os componentes da amostra.
 - O agente principal continua sendo o de maior esforço entre as conversas ativas. A lista de outras conversas e o nome curto do modelo são opcionais.
 - Use os controles de tamanho ou **Ctrl + Option + arrastar** no monitor. Na barra, ajusta a área da direita e a altura do topo; no painel aberto, ajusta a largura e o espaço extra dos detalhes. O recorte da câmera permanece ancorado e o topo respeita a altura disponível no macOS. **Ajustar automaticamente** restaura as medidas automáticas.
 - A janela aparece no Dock enquanto estiver aberta. **Ocultar na barra de menus** e o botão vermelho fecham somente as configurações; o monitor continua funcionando. Reabra pela engrenagem.
+
+### Anúncio do Tibo
+
+Arraste **Anúncio do Tibo** para uma linha. Aparece uma foto discreta com o ícone do X; ao passar o mouse ou clicar, abre o último anúncio de reset de @thsottiaux registrado em codex-resets.com, com horário, texto em português e acesso ao original. Não representa todos os posts do perfil. Os links aparecem em uma fileira compacta de botões **Link 1**, **Link 2** e **Anúncio original**, abrindo no navegador.
+
+A tradução usa o recurso do macOS 15 ou posterior. Na primeira utilização, o sistema pode baixar os idiomas inglês e português. Não utiliza a franquia do Codex nem uma chave de API. Nas versões anteriores do macOS, mostra o original e seus links. Texto traduzido e métricas de tokens ficam somente em memória.
 
 ### Último reset
 
