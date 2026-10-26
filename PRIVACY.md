@@ -9,7 +9,7 @@ O Codex Reset funciona no Mac de quem o instalou e usa o Codex autenticado nesse
 - **Associação ao projeto:** consulta apenas os campos de nomes, pastas e associações de projetos de `.codex-global-state.json`, para identificar corretamente as conversas em worktrees. Os demais campos desse arquivo não são decodificados nem retidos. Quando necessário, lê os ponteiros administrativos `.git` e `commondir` para encontrar a pasta de origem. Esses metadados ficam somente em memória e não são alterados ou enviados a terceiros.
 - A pasta do Codex é resolvida para o usuário atual, respeitando `CODEX_HOME` quando definido. Nenhum caminho pessoal de outro usuário é necessário.
 
-A franquia e os metadados das conversas ficam em memória. As preferências locais do macOS guardam somente o idioma, a disposição dos campos, as medidas escolhidas, o horário do último reset observado na conta e quantas vezes o aviso já foi apresentado. Não são salvos nomes de conversas, contagens de tokens, credenciais ou cópias dos bancos. Os bancos consultados não são modificados pelo monitor. Não há envio do histórico, nomes de projetos ou franquia para o GitHub ou para um servidor do projeto.
+A franquia e os metadados das conversas ficam em memória. As preferências locais do macOS guardam somente o idioma, o estilo da franquia, a disposição dos campos, as medidas escolhidas, o horário do último reset observado na conta e quantas vezes o aviso já foi apresentado. Não são salvos nomes de conversas, contagens de tokens, credenciais ou cópias dos bancos. Os bancos consultados não são modificados pelo monitor. Não há envio do histórico, nomes de projetos ou franquia para o GitHub ou para um servidor do projeto.
 
 ## Conexões
 

@@ -38,6 +38,8 @@ struct DashboardPreferences: Codable, Equatable {
     var showConversations = true
     var highlightNewReset = true
     var compactModelName = false
+    var quotaStyle: QuotaStyle?
+    var selectedQuotaStyle: QuotaStyle { quotaStyle ?? .compact }
     var language: AppLanguage?
     var appLanguage: AppLanguage { language ?? .portuguese }
     var classicEditor: Bool?

@@ -9,6 +9,7 @@ struct NotchGeometry: Equatable {
     let topInset: CGFloat
     let isCapsule: Bool
     private(set) var leftWingWidth: CGFloat
+    private(set) var quotaStyle: QuotaStyle = .compact
     private(set) var detailHeight: CGFloat = 132
     private(set) var listDetailHeight: CGFloat = 184
     private var customDetailWidth: CGFloat = 0
@@ -57,6 +58,13 @@ struct NotchGeometry: Equatable {
     var quotaStrokeWidth: CGFloat { min(2.7, quotaDiameter / 10) }
     var capsuleQuotaFontSize: CGFloat { min(17, max(1, compactHeight - 4)) }
     var capsuleActivityFontSize: CGFloat { min(13, max(1, compactHeight - 4)) }
+    var expandedQuotaDiameter: CGFloat { min(compactHeight - 2, quotaDiameter + 4) }
+    func quotaNumberMetrics(expanded: Bool) -> QuotaNumberMetrics {
+        QuotaNumberMetrics(height: compactHeight, expanded: expanded, stacked: !isCapsule)
+    }
+    var quotaIndicatorWidth: CGFloat {
+        quotaStyle == .largeNumber ? quotaNumberMetrics(expanded: true).contentWidth : quotaDiameter
+    }
 
     func fittingActivity(_ thread: ActiveThread?, hasDisclosure: Bool,
                          preferences: DashboardPreferences = DashboardPreferences()) -> Self {
@@ -74,6 +82,11 @@ struct NotchGeometry: Equatable {
         }
         if let height = preferences.preferredCompactHeight {
             fitted.compactHeight = min(compactHeight, max(isCapsule ? 12 : 20, height))
+        }
+        fitted.quotaStyle = preferences.selectedQuotaStyle
+        if !isCapsule && fitted.quotaStyle == .largeNumber {
+            // Reserve the widest hover state so the camera and quota never jump.
+            fitted.leftWingWidth = ceil(fitted.quotaIndicatorWidth) + 22
         }
         if !preferences.showQuota { fitted.leftWingWidth = isCapsule && rows.isEmpty ? 28 : 0 }
         let maximumWidth = min(320, max(1, min(640, screenFrame.width / 2) - fitted.leftWingWidth - gapWidth))
@@ -93,7 +106,7 @@ struct NotchGeometry: Equatable {
     }
 
     func quotaCenterXInDetails(hasActivity: Bool) -> CGFloat {
-        let quotaOffset = isCapsule ? leftWingWidth / 2 : leftWingWidth - 12 - quotaDiameter / 2
+        let quotaOffset = isCapsule ? leftWingWidth / 2 : leftWingWidth - 12 - quotaIndicatorWidth / 2
         return max(16, (expandedWidth - compactWidth(hasActivity: hasActivity)) / 2 + quotaOffset)
     }
 

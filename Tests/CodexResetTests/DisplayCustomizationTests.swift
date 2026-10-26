@@ -44,6 +44,24 @@ final class DisplayCustomizationTests: XCTestCase {
         XCTAssertEqual(DashboardStore(defaults: defaults).preferences, DashboardPreferences())
     }
 
+    func testQuotaStyleMigratesPersistsAndSurvivesRestoringOnlyTheLayout() throws {
+        let defaults = isolatedDefaults()
+        var previous = DashboardPreferences()
+        previous.topRows = [[.project, .model], []]
+        // An older preference file has no quotaStyle field.
+        defaults.set(try JSONEncoder().encode(previous), forKey: "displayPreferences")
+        let store = DashboardStore(defaults: defaults)
+        XCTAssertEqual(store.preferences.selectedQuotaStyle, .compact)
+        XCTAssertEqual(store.preferences.topRows, previous.topRows)
+        store.preferences.quotaStyle = .largeNumber
+        let reopened = DashboardStore(defaults: defaults)
+        XCTAssertEqual(reopened.preferences.selectedQuotaStyle, .largeNumber)
+        XCTAssertEqual(reopened.preferences.topRows, previous.topRows)
+        reopened.restoreDefaultLayout()
+        XCTAssertEqual(reopened.preferences.selectedQuotaStyle, .largeNumber)
+        XCTAssertEqual(reopened.preferences.topRows, DashboardPreferences().topRows)
+    }
+
     func testResetRemainsNewForThreeOpeningsAcrossRelaunchesAndSameSnapshotDoesNotRearmIt() {
         let defaults = isolatedDefaults()
         let started = now.addingTimeInterval(-5 * 3_600)

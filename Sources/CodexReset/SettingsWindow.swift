@@ -60,6 +60,12 @@ private struct DashboardSettingsView: View {
                     ForEach(AppLanguage.allCases) { language in Text(language.name).tag(language) }
                 }.labelsHidden().pickerStyle(.segmented).frame(width: 340)
                 Spacer()
+                Text(store.tr("Estilo da franquia")).font(.headline)
+                Picker(store.tr("Estilo da franquia"), selection: Binding(
+                    get: { store.preferences.selectedQuotaStyle }, set: { store.preferences.quotaStyle = $0 })) {
+                    ForEach(QuotaStyle.allCases) { style in Text(store.tr(style.label)).tag(style) }
+                }.labelsHidden().pickerStyle(.segmented).frame(width: 230)
+                .help(store.tr("A porcentagem cresce ao abrir o painel, dentro do espaço disponível da barra."))
             }.padding(.horizontal, 20).padding(.bottom, 14)
             ViewThatFits(in: .vertical) {
                 VStack(alignment: .leading, spacing: 14) {
@@ -194,11 +200,7 @@ private struct DashboardSettingsView: View {
                         }
                         VStack(spacing: 0) {
                             HStack(spacing: 0) {
-                                VStack(spacing: 5) {
-                                    Text(store.preferences.showQuota ? store.text(for: .quota) ?? "—%" : "")
-                                        .font(.system(size: 22, weight: .semibold)).foregroundStyle(.mint)
-                                    if store.preferences.showQuota { Capsule().fill(.mint).frame(width: 30, height: 3) }
-                                }.frame(width: 280, height: 84)
+                                quotaPreview.frame(width: 280, height: 84)
                                 VStack(spacing: 8) {
                                     Circle().fill(RadialGradient(colors: [.blue.opacity(0.55), .gray.opacity(0.2), .black], center: .center, startRadius: 1, endRadius: 7))
                                         .frame(width: 14, height: 14).overlay(Circle().stroke(.white.opacity(0.12)))
@@ -257,13 +259,7 @@ private struct DashboardSettingsView: View {
                 Text(store.tr("Seu notch")).font(.headline)
                 VStack(spacing: 12) {
                     HStack(alignment: .center, spacing: 8) {
-                        VStack(spacing: 4) {
-                            Text(store.preferences.showQuota ? store.text(for: .quota) ?? "—%" : "")
-                                .font(.system(size: 18, weight: .semibold)).foregroundStyle(.mint)
-                            if store.preferences.showQuota {
-                                Capsule().fill(.mint).frame(width: 30, height: 3)
-                            }
-                        }.frame(width: 44)
+                        quotaPreview.frame(width: 84)
                         VStack {
                             Circle().fill(Color.white.opacity(0.15)).frame(width: 7, height: 7)
                             Text(store.tr("câmera")).font(.system(size: 7)).foregroundStyle(.secondary)
@@ -298,6 +294,17 @@ private struct DashboardSettingsView: View {
             Text(label).font(.caption).frame(width: 145, alignment: .leading)
             Slider(value: value, in: range)
             Text("\(Int(value.wrappedValue)) pt").font(.caption.monospacedDigit()).frame(width: 42, alignment: .trailing)
+        }
+    }
+
+    @ViewBuilder
+    private var quotaPreview: some View {
+        if store.preferences.showQuota {
+            let preview = NotchGeometry(screenFrame: CGRect(x: 0, y: 0, width: 1440, height: 900),
+                menuBarHeight: 38, safeAreaTop: 38, notchGap: 180, notchCenterX: 720)
+                .fittingLayout(rows: [], hasDisclosure: false, preferences: store.preferences)
+            QuotaCompactView(store: store, geometry: preview, expanded: false)
+                .frame(width: preview.leftWingWidth, height: preview.compactHeight).foregroundStyle(.white)
         }
     }
 

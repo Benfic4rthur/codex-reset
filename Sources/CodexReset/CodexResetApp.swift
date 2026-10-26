@@ -104,6 +104,7 @@ final class DashboardStore: ObservableObject {
     func restoreDefaultLayout() {
         var restored = DashboardPreferences()
         restored.language = preferences.language
+        restored.quotaStyle = preferences.quotaStyle
         preferences = restored
     }
 
@@ -558,7 +559,7 @@ private struct NotchRootView: View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 if store.preferences.showQuota {
-                    QuotaCompactView(store: store, geometry: geometry)
+                    QuotaCompactView(store: store, geometry: geometry, expanded: expanded)
                         .frame(width: geometry.leftWingWidth, height: geometry.compactHeight)
                 } else if geometry.isCapsule && !hasActivity {
                     Image(systemName: "ellipsis").frame(width: geometry.leftWingWidth, height: geometry.compactHeight)
@@ -603,19 +604,23 @@ private struct NotchRootView: View {
     }
 }
 
-private struct QuotaCompactView: View {
+struct QuotaCompactView: View {
     @ObservedObject var store: DashboardStore
     let geometry: NotchGeometry
+    let expanded: Bool
 
     var body: some View {
         Group {
-            if geometry.isCapsule {
+            if geometry.quotaStyle == .largeNumber {
+                largeNumberQuota
+            } else if geometry.isCapsule {
                 capsuleQuota
             } else {
                 notchedQuota
             }
         }
         .animation(.easeInOut(duration: 0.35), value: remainingFraction)
+        .animation(.easeInOut(duration: 0.2), value: expanded)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(store.tr("Franquia semanal do Codex: %@ restante", percentage))
     }
@@ -623,7 +628,9 @@ private struct QuotaCompactView: View {
     private var capsuleQuota: some View {
         HStack(spacing: 8) {
             Text(percentage)
-                .font(.system(size: geometry.capsuleQuotaFontSize, weight: .semibold))
+                .font(.system(size: expanded ? max(geometry.capsuleQuotaFontSize,
+                    min(geometry.capsuleQuotaFontSize + 2, geometry.quotaNumberMetrics(expanded: true).fontSize))
+                    : geometry.capsuleQuotaFontSize, weight: .semibold))
                 .monospacedDigit()
                 .fixedSize(horizontal: true, vertical: false)
                 .contentTransition(.numericText())
@@ -650,15 +657,48 @@ private struct QuotaCompactView: View {
                 .stroke(Visual.accent, style: StrokeStyle(lineWidth: geometry.quotaStrokeWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Text(percentage)
-                .font(.system(size: percentage == "100%" ? 8 : 9, weight: .semibold, design: .rounded))
+                .font(.system(size: (percentage == "100%" ? 8 : 9) + (expanded ? 1 : 0), weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.65)
                 .contentTransition(.numericText())
         }
         .frame(width: geometry.quotaDiameter, height: geometry.quotaDiameter)
+        .scaleEffect(expanded ? geometry.expandedQuotaDiameter / geometry.quotaDiameter : 1)
         .frame(maxWidth: .infinity, alignment: .trailing)
         .padding(.trailing, 12)
+    }
+
+    private var largeNumberQuota: some View {
+        let metrics = geometry.quotaNumberMetrics(expanded: expanded)
+        let text = Text(percentage)
+            .font(.system(size: metrics.fontSize, weight: .semibold))
+            .foregroundStyle(Visual.accent)
+            .monospacedDigit().lineLimit(1).fixedSize()
+            .contentTransition(.numericText())
+            .frame(height: metrics.textHeight)
+        return Group {
+            if geometry.isCapsule {
+                HStack(spacing: metrics.spacing) {
+                    text
+                    quotaBar(width: metrics.barWidth, height: metrics.barHeight)
+                }.frame(maxWidth: .infinity)
+            } else {
+                VStack(spacing: metrics.spacing) {
+                    text
+                    quotaBar(width: metrics.barWidth, height: metrics.barHeight)
+                }
+                .frame(width: geometry.quotaIndicatorWidth, height: geometry.compactHeight)
+                .frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, 12)
+            }
+        }
+    }
+
+    private func quotaBar(width: CGFloat, height: CGFloat) -> some View {
+        ZStack(alignment: .leading) {
+            Capsule().fill(Visual.muted.opacity(0.34))
+            Capsule().fill(Visual.accent).frame(width: width * remainingFraction)
+        }.frame(width: width, height: height).accessibilityHidden(true)
     }
 
     private var remainingFraction: CGFloat {

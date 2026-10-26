@@ -23,6 +23,8 @@
 
 - A identificação do projeto deve acompanhar a associação da conversa no Codex, inclusive em worktrees fora das raízes cadastradas. Prefira project_id válido do banco e depois metadados locais de associação/migração do desktop; reconheça conversas explicitamente sem projeto. Use raízes com limite de diretório e ponteiros Git como fallback, sem inferir apenas pelo nome da pasta. Não retenha outros campos do estado do desktop.
 
+- Preserve o estilo Compacto como opção e ofereça Número grande nas configurações. A escolha é local, migra sem perder layouts anteriores e sobrevive à restauração da disposição padrão. Ao abrir o painel, permita crescimento da porcentagem dentro da altura real disponível, incluindo 100%, com câmera e indicador ancorados e sem alargar o topo só por causa do hover.
+
 ## Privacidade
 
 - Nunca versione nem distribua chaves, tokens, arquivos .env, autenticação do Codex, bancos locais, logs, certificados privados ou dados de conversas.

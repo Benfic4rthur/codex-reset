@@ -34,6 +34,10 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 
     static let translations: [String: [String]] = [
+        "Estilo da franquia": ["Quota style", "Estilo de cuota"],
+        "Compacto": ["Compact", "Compacto"],
+        "Número grande": ["Large number", "Número grande"],
+        "A porcentagem cresce ao abrir o painel, dentro do espaço disponível da barra.": ["The percentage grows when the panel opens, within the available menu bar space.", "El porcentaje crece al abrir el panel, dentro del espacio disponible en la barra."],
         "Recentes": ["Recents", "Recientes"],
         "Conversa sem título": ["Untitled chat", "Chat sin título"],
         "Idioma": ["Language", "Idioma"],

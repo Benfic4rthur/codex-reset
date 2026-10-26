@@ -53,7 +53,7 @@ Para atualizar, feche o Codex Reset pelo botão de desligar que aparece ao passa
 
 ## Como funciona
 
-- **Franquia:** anel com a porcentagem restante da janela semanal. Atualiza a cada 30 segundos usando uma conexão local reutilizada com o Codex App Server.
+- **Franquia:** escolha entre o estilo Compacto e Número grande para a porcentagem restante da janela semanal. Atualiza a cada 30 segundos usando uma conexão local reutilizada com o Codex App Server.
 - **Atividade:** projeto, modelo e esforço da conversa ativa mais pesada. Sem atividade, aparece apenas a franquia. A seta aparece quando há mais de uma conversa ativa. A lista atualiza a cada 5 segundos. O nome do projeto considera a associação salva no Codex, incluindo conversas executadas em cópias de trabalho (worktrees) fora da pasta principal. Quando necessário, identifica a origem da cópia pelos metadados do Git.
 - **Renovação semanal:** ao passar o mouse, aparece uma contagem regressiva até a renovação informada pela conta. Mostra dias e horas (por exemplo, `6d 18h`); quando falta menos de um dia, mostra horas e minutos (por exemplo, `18h 30m`). A tela atualiza a cada minuto.
 - **Reset extra:** janela histórica baseada somente nos resets dos últimos **30 dias** de [codex-resets.com](https://codex-resets.com/), com datas estimadas de início e fim ancoradas no último reset observado. A faixa aparece em linguagem direta, como “Entre 1d 14h e 3d 19h”, com a indicação “Estimativa histórica”. Abaixo de um dia, usa horas e minutos. Dentro da janela, mostra “Dentro da janela” e o tempo estimado restante; a tela atualiza a cada minuto. O histórico é consultado ao abrir o aplicativo e depois a cada **duas horas**. O botão de atualizar nos detalhes, alinhado abaixo do indicador de porcentagem, consulta a fonte imediatamente, sem fechar o app. Durante a consulta, mostra um indicador de carregamento e bloqueia novos cliques; se falhar, permite tentar novamente. A partir de seis intervalos válidos, permite estimativa; entre seis e onze, mostra “Estimativa · poucos dados”. Abaixo de seis, informa histórico insuficiente, sem recorrer a dados mais antigos. A contagem a cada minuto é local, sem nova consulta ao site; consultar os mesmos dados não reinicia o prazo. Quando a janela termina, aparece “Janela encerrada”, aguardando novos dados. Quando um anúncio vence e a conta já renovou a franquia, o app encerra o aviso antigo, consulta a fonte e recalcula a próxima janela a partir do reset observado, usando os mesmos intervalos históricos do site. A confirmação usa a mudança da franquia ou o início do novo ciclo semanal perto do horário anunciado; uma porcentagem alta sozinha não confirma reset. O início do ciclo também permite reconhecer a renovação ao reabrir o app. Consultar os mesmos dados não restaura o anúncio nem reinicia a contagem. Não representa uma promessa nem um aviso antecipado da OpenAI.
@@ -63,6 +63,12 @@ Nos MacBooks Intel e nos M1 sem notch, a cápsula compacta fica centralizada e i
 ## Idioma
 
 Nas configurações, escolha **Português**, **English** ou **Español**. A troca vale imediatamente para o notch, os detalhes, os avisos e previsões de reset, as dicas e toda a janela de configurações. O idioma fica salvo neste Mac e não altera a disposição dos campos. Nomes de projetos, conversas e modelos permanecem como foram definidos.
+
+## Estilo da franquia
+
+Nas configurações, escolha **Compacto** para manter a apresentação atual ou **Número grande** para destacar a porcentagem. Nos Macs com notch, o novo estilo usa um número maior com uma barra de progresso fina abaixo. Em telas sem notch, mantém número e barra lado a lado dentro da barra de menus.
+
+Ao abrir o painel com o mouse, a porcentagem cresce um pouco quando há espaço. O tamanho é calculado com a altura disponível e as medidas reais da fonte, incluindo `100%`, mantendo a câmera e o indicador ancorados e o topo dentro da barra de menus. A escolha fica salva neste Mac e é preservada ao restaurar a disposição padrão dos campos.
 
 ## Monte o seu painel
 

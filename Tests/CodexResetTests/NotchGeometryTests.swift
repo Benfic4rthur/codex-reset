@@ -79,4 +79,76 @@ final class NotchGeometryTests: XCTestCase {
         XCTAssertEqual(geometry.quotaDiameter, 30)
         XCTAssertEqual(geometry.quotaStrokeWidth, 2.7)
     }
+
+    func testLargeQuotaFitsAllPercentagesAndHoverInsideTheMeasuredBar() {
+        for gap: CGFloat in [0, 180] {
+            for barHeight: CGFloat in gap == 0 ? [18, 22, 24, 28, 38, 48, 64] : [28, 32, 38, 48] {
+                for manualHeight: Double? in [nil, 20] {
+                    var preferences = DashboardPreferences()
+                    preferences.quotaStyle = .largeNumber
+                    preferences.preferredCompactHeight = manualHeight
+                    let geometry = NotchGeometry(screenFrame: CGRect(x: 0, y: 0, width: 1440, height: 900),
+                        menuBarHeight: barHeight, safeAreaTop: gap == 0 ? 0 : barHeight,
+                        notchGap: gap, notchCenterX: gap == 0 ? nil : 720)
+                        .fittingLayout(rows: [["Example"]], hasDisclosure: true, preferences: preferences)
+                    let closed = geometry.quotaNumberMetrics(expanded: false)
+                    let opened = geometry.quotaNumberMetrics(expanded: true)
+                    XCTAssertGreaterThanOrEqual(opened.fontSize, closed.fontSize)
+                    XCTAssertLessThanOrEqual(geometry.topInset + geometry.compactHeight, barHeight)
+                    for metrics in [closed, opened] {
+                        XCTAssertLessThanOrEqual(metrics.contentHeight, geometry.compactHeight)
+                        XCTAssertLessThanOrEqual(metrics.contentWidth, geometry.isCapsule ? geometry.leftWingWidth : geometry.quotaIndicatorWidth)
+                        let font = NSFont.monospacedDigitSystemFont(ofSize: metrics.fontSize, weight: .semibold)
+                        for percentage in ["0%", "9%", "69%", "99%", "100%", "—%"] {
+                            let measured = (percentage as NSString).size(withAttributes: [.font: font])
+                            XCTAssertLessThanOrEqual(measured.width, metrics.textWidth)
+                            XCTAssertLessThanOrEqual(measured.height, metrics.textHeight)
+                        }
+                    }
+                    if gap > 0 && barHeight == 38 && manualHeight == nil {
+                        XCTAssertGreaterThanOrEqual(closed.fontSize, 20)
+                        XCTAssertGreaterThan(opened.fontSize, closed.fontSize)
+                    }
+                }
+            }
+        }
+    }
+
+    func testLargeQuotaCameraAndRefreshStayAnchoredAcrossActivityAndDetailWidths() {
+        let base = NotchGeometry(screenFrame: CGRect(x: -2056, y: -100, width: 2056, height: 1329),
+            menuBarHeight: 38, safeAreaTop: 38, notchGap: 220, notchCenterX: -1028)
+        var previousQuotaX: CGFloat?
+        for width: Double in [320, 500, 900] {
+            for rows in [[], [["Example project"], ["6.1 Sol", "Ultra"]]] {
+                var preferences = DashboardPreferences()
+                preferences.quotaStyle = .largeNumber
+                preferences.preferredDetailWidth = width
+                let geometry = base.fittingLayout(rows: rows, hasDisclosure: !rows.isEmpty, preferences: preferences)
+                let left = geometry.frame.minX + (geometry.envelopeWidth - geometry.compactWidth(hasActivity: !rows.isEmpty)) / 2
+                XCTAssertEqual(left + geometry.leftWingWidth + geometry.gapWidth / 2, base.centerX, accuracy: 0.001)
+                let quotaX = left + geometry.leftWingWidth - 12 - geometry.quotaIndicatorWidth / 2
+                if let previousQuotaX { XCTAssertEqual(quotaX, previousQuotaX, accuracy: 0.001) }
+                previousQuotaX = quotaX
+                let refreshX = geometry.quotaCenterXInDetails(hasActivity: !rows.isEmpty)
+                XCTAssertEqual(geometry.frame.minX + (geometry.envelopeWidth - geometry.expandedWidth) / 2 + refreshX,
+                    quotaX, accuracy: 0.001)
+                XCTAssertLessThanOrEqual(geometry.toolbarRefreshCenterX(hasActivity: true), geometry.expandedWidth / 2 - 40)
+            }
+        }
+    }
+
+    func testCompactRingCanGrowOnHoverWithoutCrossingItsOriginalWingOrBar() {
+        for height: Double in [20, 24, 28, 36] {
+            var preferences = DashboardPreferences()
+            preferences.preferredCompactHeight = height
+            let geometry = NotchGeometry(screenFrame: CGRect(x: 0, y: 0, width: 1440, height: 900),
+                menuBarHeight: 38, safeAreaTop: 38, notchGap: 180, notchCenterX: 720)
+                .fittingLayout(rows: [], hasDisclosure: false, preferences: preferences)
+            let center = geometry.leftWingWidth - 12 - geometry.quotaDiameter / 2
+            XCTAssertGreaterThan(geometry.expandedQuotaDiameter, geometry.quotaDiameter)
+            XCTAssertLessThanOrEqual(geometry.expandedQuotaDiameter, geometry.compactHeight)
+            XCTAssertGreaterThanOrEqual(center - geometry.expandedQuotaDiameter / 2, 0)
+            XCTAssertLessThanOrEqual(center + geometry.expandedQuotaDiameter / 2, geometry.leftWingWidth)
+        }
+    }
 }
