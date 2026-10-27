@@ -34,6 +34,7 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 
     static let translations: [String: [String]] = [
+        "Clique na foto para ler o último anúncio de reset.": ["Click the photo to read the latest reset announcement.", "Haz clic en la foto para leer el último anuncio de reinicio."],
         "Resumo do último reset": ["Latest reset summary", "Resumen del último reinicio"],
         "Resumo fornecido pelo site; o link abre a referência no X.": ["Summary provided by the site; the link opens its reference on X.", "Resumen proporcionado por el sitio; el enlace abre su referencia en X."],
         "Referência no X ↗": ["Reference on X ↗", "Referencia en X ↗"],

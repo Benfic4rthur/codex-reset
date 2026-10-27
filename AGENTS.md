@@ -29,6 +29,8 @@
 
 - O hover deve abrir o painel sem espera de permanência ao entrar em qualquer parte da faixa, incluindo a câmera e toda a altura física do notch quando a altura visual for reduzida. Use uma pequena tolerância lateral limitada à barra de menus, preserve a área visual e a passagem dos cliques e mantenha uma breve tolerância de saída, cancelada ao retornar. A detecção deve continuar nos modos comuns do run loop do macOS.
 
+- O painel geral abre por hover, mas o cartão do anúncio do Tibo deve abrir somente por clique na foto (ou ativação acessível do botão). Passar o mouse pela foto ou por outra parte do painel não pode abrir esse cartão.
+
 ## Privacidade
 
 - Nunca versione nem distribua chaves, tokens, arquivos .env, autenticação do Codex, bancos locais, logs, certificados privados ou dados de conversas.

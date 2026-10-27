@@ -16,10 +16,10 @@ struct TiboAnnouncementView: View {
             }.frame(width: size + 5, height: size + 3)
         }
         .buttonStyle(.plain).accessibilityLabel(store.tr("Ler último anúncio de reset do Tibo"))
-        .help(store.tr("Último anúncio de reset · traduzido para português"))
+        .help(store.tr("Clique na foto para ler o último anúncio de reset."))
         .onHover { inside in
             closeWork?.cancel()
-            if inside { presented = true } else { scheduleClose() }
+            if !inside && presented { scheduleClose() }
         }
         .onChange(of: presented) { _, value in store.showsAnnouncement = value }
         .onDisappear { closeWork?.cancel(); store.showsAnnouncement = false }
