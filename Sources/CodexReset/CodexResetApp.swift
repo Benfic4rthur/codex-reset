@@ -155,6 +155,7 @@ final class DashboardStore: ObservableObject {
     private var usageTimer: Timer?
     private var forecastTimer: Timer?
     private var hoverWork: DispatchWorkItem?
+    private var hoverGeneration = 0
     private var threadsInFlight = false
     private var usageInFlight = false
     private var sourceForecast: ResetForecast?
@@ -193,18 +194,30 @@ final class DashboardStore: ObservableObject {
         usageTimer?.invalidate()
         forecastTimer?.invalidate()
         hoverWork?.cancel()
+        hoverGeneration += 1
     }
 
     func setHover(_ inside: Bool) {
         hoverWork?.cancel()
+        hoverWork = nil
+        hoverGeneration += 1
+        if inside {
+            if !showHoverDetails {
+                panelOpened()
+                showHoverDetails = true
+            }
+            return
+        }
+        guard showHoverDetails || listExpanded else { return }
+        let generation = hoverGeneration
         let work = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            if inside && !self.showHoverDetails { self.panelOpened() }
-            self.showHoverDetails = inside
-            if !inside { self.listExpanded = false }
+            guard let self, self.hoverGeneration == generation else { return }
+            self.showHoverDetails = false
+            self.listExpanded = false
+            self.hoverWork = nil
         }
         hoverWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + (inside ? 0.18 : 0.30), execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.30, execute: work)
     }
 
     func toggleThreads() {
@@ -397,9 +410,13 @@ private final class NotchWindow: NSObject {
         hostingView = host
         panel.orderFrontRegardless()
 
-        pointerTimer = Timer.scheduledTimer(withTimeInterval: 0.12, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.updatePointer() }
         }
+        timer.tolerance = 0.003
+        RunLoop.main.add(timer, forMode: .common)
+        pointerTimer = timer
+        updatePointer()
         menuBarTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, self.geometry.isCapsule else { return }
@@ -599,7 +616,7 @@ private struct NotchRootView: View {
             .fill(.black)
             .frame(width: geometry.envelopeWidth, height: geometry.envelopeHeight)
         }
-        .animation(.spring(response: 0.42, dampingFraction: 0.84), value: visibleDepth)
+        .animation(.spring(response: 0.28, dampingFraction: 0.87), value: visibleDepth)
         .animation(geometry.isCapsule ? .spring(response: 0.42, dampingFraction: 0.84) : nil, value: compactWidth)
     }
 }

@@ -27,6 +27,8 @@
 
 - O anúncio mais recente deve considerar registros x_post e observed da fonte. Aceite observed sem autor somente com link HTTPS canônico de status numérico de @thsottiaux no X; identifique o texto como resumo da fonte. Priorize o texto da postagem sobre o resumo do mesmo link e invalide a tradução quando o texto ou a origem mudar, sem interferir na amostra histórica dos resets.
 
+- O hover deve abrir o painel sem espera de permanência ao entrar em qualquer parte da faixa, incluindo a câmera e toda a altura física do notch quando a altura visual for reduzida. Use uma pequena tolerância lateral limitada à barra de menus, preserve a área visual e a passagem dos cliques e mantenha uma breve tolerância de saída, cancelada ao retornar. A detecção deve continuar nos modos comuns do run loop do macOS.
+
 ## Privacidade
 
 - Nunca versione nem distribua chaves, tokens, arquivos .env, autenticação do Codex, bancos locais, logs, certificados privados ou dados de conversas.

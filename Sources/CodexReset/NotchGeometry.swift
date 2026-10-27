@@ -7,6 +7,7 @@ struct NotchGeometry: Equatable {
     private(set) var compactHeight: CGFloat
     private(set) var rightWingWidth: CGFloat
     let topInset: CGFloat
+    let topActivationHeight: CGFloat
     let isCapsule: Bool
     private(set) var leftWingWidth: CGFloat
     private(set) var quotaStyle: QuotaStyle = .compact
@@ -38,6 +39,7 @@ struct NotchGeometry: Equatable {
         isCapsule = notchGap <= 100
         centerX = notchCenterX ?? screenFrame.midX
         if isCapsule {
+            topActivationHeight = max(1, menuBarHeight)
             gapWidth = 0
             compactHeight = max(1, menuBarHeight - 2)
             leftWingWidth = 104
@@ -49,6 +51,7 @@ struct NotchGeometry: Equatable {
             leftWingWidth = 48
             rightWingWidth = 112
             let reservedTop = safeAreaTop > 0 ? safeAreaTop : menuBarHeight
+            topActivationHeight = max(1, reservedTop)
             compactHeight = max(24, reservedTop - 2)
             topInset = 0
         }
@@ -133,8 +136,14 @@ struct NotchGeometry: Equatable {
     func topContains(_ point: CGPoint, hasActivity: Bool) -> Bool {
         let width = compactWidth(hasActivity: hasActivity)
         let x = (envelopeWidth - width) / 2
-        return point.x >= x && point.x <= x + width
-            && point.y >= envelopeHeight - compactHeight && point.y <= envelopeHeight
+        let screenTop = screenFrame.maxY - frame.minY
+        let screenX = frame.minX + point.x
+        // This is an activation area only: include the entire camera/notch
+        // height and a small side tolerance without growing the visible panel
+        // or intercepting clicks in the neighboring apps.
+        return screenX >= screenFrame.minX && screenX <= screenFrame.maxX
+            && point.x >= x - 4 && point.x <= x + width + 4
+            && point.y >= screenTop - topActivationHeight && point.y <= screenTop
     }
 
     func detailContains(_ point: CGPoint, height: CGFloat) -> Bool {
