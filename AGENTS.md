@@ -25,6 +25,8 @@
 
 - Preserve o estilo Compacto como opção e ofereça Número grande nas configurações. A escolha é local, migra sem perder layouts anteriores e sobrevive à restauração da disposição padrão. Ao abrir o painel, permita crescimento da porcentagem dentro da altura real disponível, incluindo 100%, com câmera e indicador ancorados e sem alargar o topo só por causa do hover.
 
+- O anúncio mais recente deve considerar registros x_post e observed da fonte. Aceite observed sem autor somente com link HTTPS canônico de status numérico de @thsottiaux no X; identifique o texto como resumo da fonte. Priorize o texto da postagem sobre o resumo do mesmo link e invalide a tradução quando o texto ou a origem mudar, sem interferir na amostra histórica dos resets.
+
 ## Privacidade
 
 - Nunca versione nem distribua chaves, tokens, arquivos .env, autenticação do Codex, bancos locais, logs, certificados privados ou dados de conversas.

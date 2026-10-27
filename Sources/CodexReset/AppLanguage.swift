@@ -16,7 +16,7 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable, Sendable {
     }
     var locale: Locale { Locale(identifier: rawValue) }
     var needsAnnouncementTranslation: Bool { self != .english }
-    func translationKey(for post: ResetPost) -> String { rawValue + ":" + post.id }
+    func translationKey(for post: ResetPost) -> String { rawValue + ":" + post.translationRevision }
 
     func text(_ key: String, _ arguments: CVarArg...) -> String {
         let translated = self == .portuguese ? key : Self.translations[key]?[self == .english ? 0 : 1] ?? key
@@ -34,6 +34,10 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 
     static let translations: [String: [String]] = [
+        "Resumo do último reset": ["Latest reset summary", "Resumen del último reinicio"],
+        "Resumo fornecido pelo site; o link abre a referência no X.": ["Summary provided by the site; the link opens its reference on X.", "Resumen proporcionado por el sitio; el enlace abre su referencia en X."],
+        "Referência no X ↗": ["Reference on X ↗", "Referencia en X ↗"],
+        "Texto da fonte · inglês": ["Source text · English", "Texto de la fuente · inglés"],
         "Estilo da franquia": ["Quota style", "Estilo de cuota"],
         "Compacto": ["Compact", "Compacto"],
         "Número grande": ["Large number", "Número grande"],

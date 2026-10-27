@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 enum ResetCountdown {
     static func remaining(until deadline: Date, at now: Date) -> String? {
@@ -43,10 +44,17 @@ struct ScheduledResetAnnouncement: Sendable {
 }
 
 struct ResetPost: Sendable, Equatable {
+    enum Origin: String, Sendable { case tweet, observed }
     let date: Date
     let text: String
     let url: URL
+    let origin: Origin
     var id: String { url.absoluteString }
+    var isSourceSummary: Bool { origin == .observed }
+    var translationRevision: String {
+        let hash = SHA256.hash(data: Data((origin.rawValue + "\n" + text).utf8))
+        return id + ":" + hash.map { String(format: "%02x", $0) }.joined()
+    }
     var links: [URL] {
         guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else { return [] }
         var seen: Set<URL> = []
@@ -62,13 +70,37 @@ struct ResetPost: Sendable, Equatable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    init?(date: Date, text: String, url: URL?, author: String?) {
-        guard author == "thsottiaux", let url, url.scheme == "https", url.host?.lowercased() == "x.com",
-              url.path.hasPrefix("/thsottiaux/status/"),
+    init?(date: Date, text: String, url: URL?, author: String?, sourceType: String = "x_post") {
+        guard ["x_post", "observed"].contains(sourceType), let url,
+              url.scheme?.lowercased() == "https", url.host?.lowercased() == "x.com",
+              url.user == nil, url.password == nil, url.port == nil || url.port == 443,
+              url.pathComponents.count == 4,
+              url.pathComponents[1].lowercased() == "thsottiaux", url.pathComponents[2] == "status",
+              let statusID = url.pathComponents.last, !statusID.isEmpty,
+              statusID.unicodeScalars.allSatisfy({ (48...57).contains($0.value) }),
               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        // Observed reset records omit author and provide tracker-written text.
+        // Accept that format only with the canonical account/status URL, and
+        // keep it distinct from the author's actual post text in the UI.
+        let author = author?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard author == "thsottiaux" || (sourceType == "observed" && (author == nil || author == "")) else { return nil }
         self.date = date
         self.text = text
-        self.url = url
+        self.url = URL(string: "https://x.com/thsottiaux/status/" + statusID)!
+        self.origin = sourceType == "observed" ? .observed : .tweet
+    }
+
+    static func newest(in candidates: [ResetPost]) -> ResetPost? {
+        var posts: [String: ResetPost] = [:]
+        for candidate in candidates {
+            // History may still hold an observed placeholder after status has
+            // acquired the complete tweet. Prefer actual text for the same URL.
+            if let previous = posts[candidate.id], previous.origin == .tweet && candidate.isSourceSummary { continue }
+            posts[candidate.id] = candidate
+        }
+        return posts.values.max {
+            $0.date == $1.date ? $0.id < $1.id : $0.date < $1.date
+        }
     }
 }
 
@@ -158,11 +190,12 @@ enum ResetForecastService {
         "2076418567143408112"  // July 12, 2026
     ]
 
-    static func fetch() async throws -> ResetForecast {
+    static func fetch(at now: Date = Date(), using loader: (@Sendable (URL) async throws -> Data)? = nil) async throws -> ResetForecast {
+        let load = loader ?? { try await responseData($0) }
         let status: StatusResponse = try await request(
-            URL(string: "https://codex-resets.com/api/v1/status")!
+            URL(string: "https://codex-resets.com/api/v1/status")!, using: load
         )
-        let allResets = try await fetchHistory()
+        let allResets = try await fetchHistory(at: now, using: load)
         // The status endpoint can refresh before the paginated history cache.
         // Prefer the newest observed event from either response.
         let candidates = allResets + [status.data.latestReset].compactMap { $0 }
@@ -174,7 +207,6 @@ enum ResetForecastService {
             throw ResetForecastError.noObservedResets
         }
 
-        let now = Date()
         let gaps = recentIntervals(from: applied.map(\.announcedAt), at: now)
         let age = max(0, now.timeIntervalSince(latest))
         let comparableGaps = gaps.filter { $0 > age }.sorted()
@@ -190,10 +222,12 @@ enum ResetForecastService {
         }
 
         var posts = candidates.compactMap { record in
-            ResetPost(date: record.announcedAt, text: record.text ?? "", url: record.source?.url, author: record.source?.author)
+            ResetPost(date: record.announcedAt, text: record.text ?? "", url: record.source?.url,
+                author: record.source?.author, sourceType: record.source?.type ?? "")
         }
         if let record = status.data.scheduledReset,
-           let post = ResetPost(date: record.announcedAt, text: record.text, url: record.source.url, author: record.source.author) {
+           let post = ResetPost(date: record.announcedAt, text: record.text, url: record.source.url,
+                author: record.source.author, sourceType: record.source.type) {
             posts.append(post)
         }
         return ResetForecast(
@@ -205,15 +239,15 @@ enum ResetForecastService {
             scheduledReset: verifiedAnnouncement(status.data.scheduledReset),
             sourceURL: sourceURL,
             historicalIntervals: gaps,
-            latestAnnouncement: posts.max { $0.date < $1.date }
+            latestAnnouncement: ResetPost.newest(in: posts)
         )
     }
 
-    private static func fetchHistory() async throws -> [ResetRecord] {
+    private static func fetchHistory(at now: Date, using load: @Sendable (URL) async throws -> Data) async throws -> [ResetRecord] {
         var records: [ResetRecord] = []
         var cursor: String?
         var seenCursors: Set<String> = []
-        let cutoff = Date().addingTimeInterval(-lookbackDays * secondsPerDay)
+        let cutoff = now.addingTimeInterval(-lookbackDays * secondsPerDay)
 
         repeat {
             var components = URLComponents(string: "https://codex-resets.com/api/v1/resets")!
@@ -225,7 +259,7 @@ enum ResetForecastService {
                 components.queryItems?.append(URLQueryItem(name: "cursor", value: cursor))
             }
             guard let url = components.url else { throw ResetForecastError.invalidResponse }
-            let page: ResetListResponse = try await request(url)
+            let page: ResetListResponse = try await request(url, using: load)
             records.append(contentsOf: page.data)
 
             // Stop paging once the response crosses the 30-day cutoff.
@@ -288,7 +322,7 @@ enum ResetForecastService {
         return sorted[low] + (sorted[high] - sorted[low]) * (position - Double(low))
     }
 
-    private static func request<T: Decodable>(_ url: URL) async throws -> T {
+    private static func responseData(_ url: URL) async throws -> Data {
         var request = URLRequest(url: url)
         // Cloudflare's shared cache already coalesces requests for the API.
         // Avoid a further four-hour device cache for time-sensitive notices.
@@ -302,6 +336,11 @@ enum ResetForecastService {
         guard response.statusCode == 200 else {
             throw ResetForecastError.unavailable(response.statusCode)
         }
+        return data
+    }
+
+    private static func request<T: Decodable>(_ url: URL, using load: @Sendable (URL) async throws -> Data) async throws -> T {
+        let data = try await load(url)
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         decoder.dateDecodingStrategy = .custom { decoder in

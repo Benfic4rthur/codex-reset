@@ -57,7 +57,10 @@ private struct AnnouncementCard: View {
                 TiboAvatar(size: 36)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Tibo · @thsottiaux").font(.headline)
-                    Text(store.tr("Último anúncio de reset")).font(.caption).foregroundStyle(.secondary)
+                    Text(store.tr(store.forecast?.latestAnnouncement?.isSourceSummary == true
+                        ? "Resumo do último reset" : "Último anúncio de reset")).font(.caption).foregroundStyle(.secondary)
+                        .help(store.forecast?.latestAnnouncement?.isSourceSummary == true
+                            ? store.tr("Resumo fornecido pelo site; o link abre a referência no X.") : store.tr("Último anúncio de reset"))
                 }
                 Spacer()
             }
@@ -66,7 +69,8 @@ private struct AnnouncementCard: View {
                 if !store.language.needsAnnouncementTranslation {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(post.readableText).font(.system(size: 14)).textSelection(.enabled)
-                        Text(store.tr("Tradução automática · português")).font(.caption2).foregroundStyle(.secondary)
+                        Text(store.tr(post.isSourceSummary ? "Texto da fonte · inglês" : "Tradução automática · português"))
+                            .font(.caption2).foregroundStyle(.secondary)
                     }
                 } else if #available(macOS 15.0, *) {
                     TranslatedPost(post: post, store: store, language: store.language)
@@ -82,12 +86,12 @@ private struct AnnouncementCard: View {
                                 .font(.caption).padding(.horizontal, 8).padding(.vertical, 5)
                                 .background(.quaternary, in: RoundedRectangle(cornerRadius: 5)).help(url.absoluteString)
                         }
-                        Link(store.tr("Anúncio original ↗"), destination: post.url)
+                        Link(store.tr(post.isSourceSummary ? "Referência no X ↗" : "Anúncio original ↗"), destination: post.url)
                             .font(.caption).padding(.horizontal, 8).padding(.vertical, 5)
                             .background(.quaternary, in: RoundedRectangle(cornerRadius: 5))
                     }
                 } else {
-                    Link(store.tr("Anúncio original ↗"), destination: post.url).font(.caption)
+                    Link(store.tr(post.isSourceSummary ? "Referência no X ↗" : "Anúncio original ↗"), destination: post.url).font(.caption)
                 }
             } else {
                 Text(store.isRefreshingForecast ? store.tr("Buscando o anúncio…") : store.tr("Anúncio ainda indisponível."))
