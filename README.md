@@ -9,13 +9,13 @@ Sua franquia do Codex sempre à vista. Um monitor nativo para macOS que mostra a
 ## Downloads
 
 <!-- latest-release:start -->
-### Versão atual: [0.1.20](https://github.com/Benfic4rthur/codex-reset/releases/tag/v0.1.20)
+### Versão atual: [0.1.21](https://github.com/Benfic4rthur/codex-reset/releases/tag/v0.1.21)
 
-Os dois downloads abaixo são da **versão 0.1.20**. [Ver novidades desta versão](https://github.com/Benfic4rthur/codex-reset/releases/tag/v0.1.20).
+Os dois downloads abaixo são da **versão 0.1.21**. [Ver novidades desta versão](https://github.com/Benfic4rthur/codex-reset/releases/tag/v0.1.21).
 
 | Apple Silicon · M1, M2, M3 e posteriores | Intel · x86_64 |
 | :---: | :---: |
-| **[⬇ Baixar Apple Silicon · 0.1.20](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Apple-Silicon.dmg)** | **[⬇ Baixar Intel · 0.1.20](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Intel.dmg)** |
+| **[⬇ Baixar Apple Silicon · 0.1.21](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Apple-Silicon.dmg)** | **[⬇ Baixar Intel · 0.1.21](https://github.com/Benfic4rthur/codex-reset/releases/latest/download/Codex-Reset-Intel.dmg)** |
 | Com notch: visual integrado ao recorte. Sem notch, incluindo M1: cápsula no topo | Cápsula compacta dentro da barra de menus |
 <!-- latest-release:end -->
 
