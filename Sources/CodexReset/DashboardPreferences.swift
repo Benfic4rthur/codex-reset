@@ -39,6 +39,9 @@ struct DashboardPreferences: Codable, Equatable {
     var showConversations = true
     var highlightNewReset = true
     var compactModelName = false
+    var quotaAllowances: QuotaAllowances?
+    var selectedQuotaAllowances: QuotaAllowances { quotaAllowances ?? .weekly }
+    var showsBothQuotas: Bool { selectedQuotaAllowances == .both }
     var quotaStyle: QuotaStyle?
     var selectedQuotaStyle: QuotaStyle { quotaStyle ?? .compact }
     var language: AppLanguage?

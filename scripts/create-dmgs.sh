@@ -49,6 +49,8 @@ Projeto, modelo e esforço aparecem em uma linha quando há atividade.
 O reset semanal mostra dias e horas; nas últimas 24 horas, mostra horas e minutos.
 Reset de 5 horas é um campo opcional arrastável, com o prazo real da conta.
 Ele fica fora do layout padrão; adicione nas configurações se desejar.
+Em Franquias no indicador esquerdo, escolha Semanal, 5 horas ou As duas.
+Uma franquia mantém o indicador maior; as duas ficam empilhadas na barra de menus.
 O reset extra indica a faixa com "Entre ... e ..." e "Estimativa histórica".
 O histórico usa somente os últimos 30 dias e é consultado ao abrir e a cada duas horas.
 O botão de atualizar nos detalhes, abaixo da porcentagem, consulta a fonte na hora.

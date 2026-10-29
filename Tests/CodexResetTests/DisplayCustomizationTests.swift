@@ -62,6 +62,69 @@ final class DisplayCustomizationTests: XCTestCase {
         XCTAssertEqual(reopened.preferences.topRows, DashboardPreferences().topRows)
     }
 
+    func testQuotaAllowancesMigratePersistAndSurviveLayoutRestore() throws {
+        let defaults = isolatedDefaults()
+        var old = DashboardPreferences()
+        old.topRows = [[.project, .model], []]
+        defaults.set(try JSONEncoder().encode(old), forKey: "displayPreferences")
+        let store = DashboardStore(defaults: defaults)
+        XCTAssertEqual(store.preferences.selectedQuotaAllowances, .weekly)
+        store.preferences.quotaAllowances = .both
+        let reopened = DashboardStore(defaults: defaults)
+        XCTAssertEqual(reopened.preferences.selectedQuotaAllowances, .both)
+        XCTAssertEqual(reopened.preferences.topRows, old.topRows)
+        reopened.restoreDefaultLayout()
+        XCTAssertEqual(reopened.preferences.selectedQuotaAllowances, .both)
+    }
+
+    func testQuotaSelectionUsesSeparateAccountPercentagesWithoutInventingMissingData() {
+        let store = DashboardStore(defaults: isolatedDefaults())
+        let week = QuotaWindow(usedPercent: 30, durationMinutes: 10_080, resetsAt: now.addingTimeInterval(86_400))
+        let short = QuotaWindow(usedPercent: 75, durationMinutes: 300, resetsAt: now.addingTimeInterval(3_600))
+        store.receiveUsage(UsageSnapshot(primary: short, secondary: week, availableResets: nil, fetchedAt: now))
+        XCTAssertEqual(store.indicatorQuota?.remainingPercent, 70)
+        XCTAssertEqual(store.fiveHourPercentage, "25%")
+        store.preferences.quotaAllowances = .fiveHour
+        XCTAssertEqual(store.indicatorQuota?.remainingPercent, 25)
+        store.preferences.quotaAllowances = .both
+        XCTAssertEqual(store.indicatorQuota?.remainingPercent, 70)
+        store.receiveUsage(UsageSnapshot(primary: week, secondary: nil, availableResets: nil, fetchedAt: now))
+        XCTAssertNil(store.fiveHourPercentage)
+        store.preferences.quotaAllowances = .fiveHour
+        XCTAssertNil(store.indicatorQuota)
+        store.receiveUsage(UsageSnapshot(primary: short, secondary: nil, availableResets: nil, fetchedAt: now))
+        store.preferences.quotaAllowances = .both
+        XCTAssertNil(store.indicatorQuota, "Do not repeat the 5-hour percentage as a weekly quota")
+        for choice in QuotaAllowances.allCases {
+            XCTAssertNotNil(AppLanguage.translations[choice.label])
+        }
+    }
+
+    func testStackedQuotaFitsMeasuredBarAndReservesStableWidthForHoverAnd100Percent() {
+        for gap: CGFloat in [0, 180] {
+            for height: CGFloat in [18, 22, 24, 28, 38, 48] {
+                for style in QuotaStyle.allCases {
+                    var preferences = DashboardPreferences()
+                    preferences.quotaStyle = style
+                    preferences.quotaAllowances = .both
+                    let geometry = NotchGeometry(screenFrame: CGRect(x: 0, y: 0, width: 1440, height: 900),
+                        menuBarHeight: height, safeAreaTop: gap == 0 ? 0 : height,
+                        notchGap: gap, notchCenterX: gap == 0 ? nil : 720)
+                        .fittingLayout(rows: [["Example"]], hasDisclosure: true, preferences: preferences)
+                    let closed = QuotaPairMetrics(height: geometry.compactHeight, expanded: false)
+                    let opened = QuotaPairMetrics(height: geometry.compactHeight, expanded: true)
+                    XCTAssertGreaterThanOrEqual(opened.primaryFontSize, closed.primaryFontSize)
+                    for metrics in [closed, opened] {
+                        XCTAssertEqual(metrics.primaryFontSize, metrics.secondaryFontSize)
+                        XCTAssertLessThanOrEqual(metrics.contentHeight, geometry.compactHeight)
+                        XCTAssertLessThanOrEqual(metrics.contentWidth, geometry.quotaIndicatorWidth)
+                    }
+                    if gap == 0 { XCTAssertLessThanOrEqual(geometry.topInset + geometry.compactHeight, height) }
+                }
+            }
+        }
+    }
+
     func testResetRemainsNewForThreeOpeningsAcrossRelaunchesAndSameSnapshotDoesNotRearmIt() {
         let defaults = isolatedDefaults()
         let started = now.addingTimeInterval(-5 * 3_600)

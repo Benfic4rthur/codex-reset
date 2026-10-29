@@ -33,6 +33,8 @@
 
 - Ofereça Reset de 5 horas como campo opcional arrastável, fora do layout padrão. Identifique a janela pela duração de 300 minutos em qualquer posição da resposta da conta, sem inferir pelo preço do plano. Use seu resetsAt real e aguarde atualização ao vencer, sem reiniciar a contagem por consulta ou usar a janela semanal como substituta.
 
+- Ofereça uma opção local para exibir a porcentagem restante da janela de 5 horas abaixo do indicador principal. Use somente o dado real da conta, deixe o valor em branco quando indisponível e preserve layouts antigos. Permita escolher Semanal, 5 horas ou As duas; com ambas, use fontes do mesmo tamanho. Encaixe as duas linhas na altura medida da barra, incluindo 100%, sem mover a câmera ou alargar o topo no hover.
+
 ## Privacidade
 
 - Nunca versione nem distribua chaves, tokens, arquivos .env, autenticação do Codex, bancos locais, logs, certificados privados ou dados de conversas.

@@ -105,6 +105,7 @@ final class DashboardStore: ObservableObject {
         var restored = DashboardPreferences()
         restored.language = preferences.language
         restored.quotaStyle = preferences.quotaStyle
+        restored.quotaAllowances = preferences.quotaAllowances
         preferences = restored
     }
 
@@ -143,6 +144,18 @@ final class DashboardStore: ObservableObject {
         case .tiboAnnouncement: return "Tibo"
         }
     }
+    var indicatorQuota: QuotaWindow? {
+        switch preferences.selectedQuotaAllowances {
+        case .weekly: return usage?.displayedWindow
+        case .fiveHour: return usage?.fiveHourWindow
+        case .both: return usage?.weeklyWindow
+        }
+    }
+
+    var fiveHourPercentage: String? {
+        usage?.fiveHourWindow.map { "\(Int($0.remainingPercent.rounded()))%" }
+    }
+
     var hasUnseenReset: Bool { preferences.highlightNewReset && lastResetNotice?.isUnseen == true }
 
     func tokenRateDescription(for field: DashboardField) -> String {
@@ -633,7 +646,9 @@ struct QuotaCompactView: View {
 
     var body: some View {
         Group {
-            if geometry.quotaStyle == .largeNumber {
+            if store.preferences.showsBothQuotas {
+                pairedQuota
+            } else if geometry.quotaStyle == .largeNumber {
                 largeNumberQuota
             } else if geometry.isCapsule {
                 capsuleQuota
@@ -644,7 +659,39 @@ struct QuotaCompactView: View {
         .animation(.easeInOut(duration: 0.35), value: remainingFraction)
         .animation(.easeInOut(duration: 0.2), value: expanded)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(store.tr("Franquia semanal do Codex: %@ restante", percentage))
+        .accessibilityLabel(accessibilityDescription)
+        .help(accessibilityDescription)
+    }
+
+    private var accessibilityDescription: String {
+        let main = store.tr(store.preferences.selectedQuotaAllowances == .fiveHour ? "Franquia de 5 horas: %@ restante"
+            : store.usage?.weeklyWindow == nil && !store.preferences.showsBothQuotas ? "Franquia do Codex: %@ restante" : "Franquia semanal do Codex: %@ restante", percentage)
+        guard store.preferences.showsBothQuotas else { return main }
+        let short = store.usage?.fiveHourWindow == nil
+            ? store.tr("Franquia de 5 horas não informada pelo Codex")
+            : store.tr("Franquia de 5 horas: %@ restante", store.fiveHourPercentage ?? "")
+        return main + ". " + short
+    }
+
+    private var pairedQuota: some View {
+        let metrics = QuotaPairMetrics(height: geometry.compactHeight, expanded: expanded)
+        return VStack(spacing: metrics.spacing) {
+            Text(percentage)
+                .font(.system(size: metrics.primaryFontSize, weight: .semibold))
+                .foregroundStyle(Visual.accent)
+                .frame(height: metrics.primaryHeight)
+                .contentTransition(.numericText())
+            quotaBar(width: metrics.contentWidth * 0.72, height: metrics.barHeight)
+            Text(store.fiveHourPercentage.map { "5h · " + $0 } ?? "5h")
+                .font(.system(size: metrics.secondaryFontSize, weight: .semibold))
+                .foregroundStyle(Visual.accent)
+                .frame(height: metrics.secondaryHeight)
+                .contentTransition(.numericText())
+        }
+        .monospacedDigit().fixedSize()
+        .frame(width: geometry.quotaIndicatorWidth, height: geometry.compactHeight)
+        .frame(maxWidth: .infinity, alignment: geometry.isCapsule ? .center : .trailing)
+        .padding(.trailing, geometry.isCapsule ? 0 : 12)
     }
 
     private var capsuleQuota: some View {
@@ -724,12 +771,12 @@ struct QuotaCompactView: View {
     }
 
     private var remainingFraction: CGFloat {
-        guard let remaining = store.usage?.displayedWindow?.remainingPercent else { return 0 }
+        guard let remaining = store.indicatorQuota?.remainingPercent else { return 0 }
         return CGFloat(min(1, max(0, remaining / 100)))
     }
 
     private var percentage: String {
-        guard let quota = store.usage?.displayedWindow else { return "—%" }
+        guard let quota = store.indicatorQuota else { return "—%" }
         return "\(Int(quota.remainingPercent.rounded()))%"
     }
 }

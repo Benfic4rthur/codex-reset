@@ -142,6 +142,13 @@ private struct DashboardSettingsView: View {
                     Divider()
                     VStack(alignment: .leading, spacing: 10) {
                         Toggle(store.tr("Porcentagem e barra de franquia no lado esquerdo"), isOn: $store.preferences.showQuota)
+                        HStack {
+                            Text(store.tr("Franquias no indicador esquerdo"))
+                            Picker(store.tr("Franquias no indicador esquerdo"), selection: Binding(
+                                get: { store.preferences.selectedQuotaAllowances }, set: { store.preferences.quotaAllowances = $0 })) {
+                                ForEach(QuotaAllowances.allCases) { choice in Text(store.tr(choice.label)).tag(choice) }
+                            }.labelsHidden().pickerStyle(.segmented).frame(width: 280)
+                        }.disabled(!store.preferences.showQuota)
                         Toggle(store.tr("Permitir expandir a lista de outras conversas"), isOn: $store.preferences.showConversations)
                         Toggle(store.tr("Nome curto do modelo (ex.: 6.1 Sol)"), isOn: $store.preferences.compactModelName)
                         Toggle(store.tr("Destacar novo reset nas três primeiras aberturas"), isOn: $store.preferences.highlightNewReset)

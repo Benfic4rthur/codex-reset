@@ -82,6 +82,10 @@ Abra a **engrenagem à direita**, alinhada com o botão de atualizar. A janela d
 - Use os controles de tamanho ou **Ctrl + Option + arrastar** no monitor. Na barra, ajusta a área da direita e a altura do topo; no painel aberto, ajusta a largura e o espaço extra dos detalhes. O recorte da câmera permanece ancorado e o topo respeita a altura disponível no macOS. **Ajustar automaticamente** restaura as medidas automáticas.
 - A janela aparece no Dock enquanto estiver aberta. **Ocultar na barra de menus** e o botão vermelho fecham somente as configurações; o monitor continua funcionando. Reabra pela engrenagem.
 
+### Porcentagem de 5 horas abaixo da semanal
+
+Em configurações, em **Franquias no indicador esquerdo**, escolha **Semanal**, **5 horas** ou **As duas**. Com uma só franquia, mantém o indicador maior; com as duas, empilha a semanal em cima e a de cinco horas embaixo. O indicador da esquerda mostra a porcentagem principal em cima e **5h · 80%**, por exemplo, embaixo. O segundo valor é a franquia restante da janela de 300 minutos informada pela conta; sem esse dado, mantém a identificação **5h** com o valor em branco. As duas porcentagens usam o mesmo tamanho de fonte. A escolha é local, mantém o comportamento anterior por padrão e preserva os layouts salvos. As duas linhas respeitam a altura da barra de menus, com crescimento ao abrir o painel quando houver espaço. Disponível nos estilos Compacto e Número grande, com ou sem notch.
+
 ### Reset de 5 horas (opcional)
 
 Nas configurações, arraste **Reset de 5 horas** para a posição desejada nas linhas do topo ou dos detalhes, ou use o botão **+** da linha. O campo usa a janela de 300 minutos e o horário de renovação informados pela própria conta do Codex, independentemente do plano ou da posição dessa janela na resposta. A contagem acompanha o prazo real; consultar novamente não inicia cinco horas novas. Sem essa janela, mostra **Não informado pelo Codex**; após o prazo, aguarda a atualização da conta. Disponível em português, inglês e espanhol. O campo fica fora da disposição padrão e preserva o layout salvo.

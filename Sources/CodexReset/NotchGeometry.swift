@@ -10,6 +10,7 @@ struct NotchGeometry: Equatable {
     let topActivationHeight: CGFloat
     let isCapsule: Bool
     private(set) var leftWingWidth: CGFloat
+    private(set) var showsBothQuotas = false
     private(set) var quotaStyle: QuotaStyle = .compact
     private(set) var detailHeight: CGFloat = 132
     private(set) var listDetailHeight: CGFloat = 184
@@ -66,7 +67,8 @@ struct NotchGeometry: Equatable {
         QuotaNumberMetrics(height: compactHeight, expanded: expanded, stacked: !isCapsule)
     }
     var quotaIndicatorWidth: CGFloat {
-        quotaStyle == .largeNumber ? quotaNumberMetrics(expanded: true).contentWidth : quotaDiameter
+        if showsBothQuotas { return QuotaPairMetrics(height: compactHeight, expanded: true).contentWidth }
+        return quotaStyle == .largeNumber ? quotaNumberMetrics(expanded: true).contentWidth : quotaDiameter
     }
 
     func fittingActivity(_ thread: ActiveThread?, hasDisclosure: Bool,
@@ -87,7 +89,8 @@ struct NotchGeometry: Equatable {
             fitted.compactHeight = min(compactHeight, max(isCapsule ? 12 : 20, height))
         }
         fitted.quotaStyle = preferences.selectedQuotaStyle
-        if !isCapsule && fitted.quotaStyle == .largeNumber {
+        fitted.showsBothQuotas = preferences.showsBothQuotas
+        if !isCapsule && (fitted.quotaStyle == .largeNumber || fitted.showsBothQuotas) {
             // Reserve the widest hover state so the camera and quota never jump.
             fitted.leftWingWidth = ceil(fitted.quotaIndicatorWidth) + 22
         }
