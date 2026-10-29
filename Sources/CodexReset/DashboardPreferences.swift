@@ -1,7 +1,7 @@
 import Foundation
 
 enum DashboardField: String, CaseIterable, Codable, Identifiable {
-    case conversation, project, tokenRate, outputTokenRate, model, effort, activeCount, quota, extraReset, weeklyReset, lastReset, tiboAnnouncement
+    case conversation, project, tokenRate, outputTokenRate, model, effort, activeCount, quota, extraReset, weeklyReset, fiveHourReset, lastReset, tiboAnnouncement
     var id: String { rawValue }
     var label: String {
         switch self {
@@ -15,6 +15,7 @@ enum DashboardField: String, CaseIterable, Codable, Identifiable {
         case .quota: return "Franquia restante"
         case .extraReset: return "Reset extra"
         case .weeklyReset: return "Reset semanal"
+        case .fiveHourReset: return "Reset de 5 horas"
         case .lastReset: return "Último reset"
         case .tiboAnnouncement: return "Anúncio do Tibo"
         }
@@ -81,7 +82,7 @@ struct DashboardPreferences: Codable, Equatable {
     }
 
     static func detailRowHeight(_ row: [DashboardField]) -> Double {
-        let base = row.contains(.extraReset) || row.contains(.weeklyReset) ? 60.0
+        let base = row.contains(.extraReset) || row.contains(.weeklyReset) || row.contains(.fiveHourReset) ? 60.0
             : row == [.lastReset] ? 16 : row.contains(.tokenRate) || row.contains(.outputTokenRate) ? 50 : 36
         return base + (row.contains(.lastReset) ? 4 : 0)
     }

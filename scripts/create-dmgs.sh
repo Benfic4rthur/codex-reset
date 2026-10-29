@@ -47,6 +47,8 @@ com porcentagem grande e uma barra horizontal de progresso separada. A altura é
 medida pelo macOS na própria tela, com uma pequena margem para o contorno.
 Projeto, modelo e esforço aparecem em uma linha quando há atividade.
 O reset semanal mostra dias e horas; nas últimas 24 horas, mostra horas e minutos.
+Reset de 5 horas é um campo opcional arrastável, com o prazo real da conta.
+Ele fica fora do layout padrão; adicione nas configurações se desejar.
 O reset extra indica a faixa com "Entre ... e ..." e "Estimativa histórica".
 O histórico usa somente os últimos 30 dias e é consultado ao abrir e a cada duas horas.
 O botão de atualizar nos detalhes, abaixo da porcentagem, consulta a fonte na hora.

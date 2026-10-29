@@ -157,7 +157,7 @@ private struct DashboardSettingsView: View {
             classicLayoutEditor.frame(maxWidth: 680).frame(maxWidth: .infinity)
         } else {
             HStack(alignment: .top, spacing: 20) {
-                VStack(alignment: .leading, spacing: 7) {
+                VStack(alignment: .leading, spacing: 5) {
                     Text(store.tr("Informações disponíveis")).font(.headline)
                     Text(store.tr("Arraste uma peça")).font(.caption).foregroundStyle(.secondary)
                     ForEach(DashboardField.allCases) { field in
@@ -166,7 +166,7 @@ private struct DashboardSettingsView: View {
                             Text(store.tr(field.label)).font(.system(size: 11, weight: .medium))
                             Spacer(minLength: 0)
                         }
-                        .padding(8).background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+                        .padding(6).background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
                         .onDrag { dragged = field; source = nil; return NSItemProvider(object: field.rawValue as NSString) }
                     }
                 }.frame(width: 165)
@@ -241,7 +241,7 @@ private struct DashboardSettingsView: View {
 
     private var classicLayoutEditor: some View {
         HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(store.tr("Campos")).font(.headline)
                 Text(store.tr("Arraste para o desenho")).font(.caption).foregroundStyle(.secondary)
                 ForEach(DashboardField.allCases) { field in
@@ -250,7 +250,7 @@ private struct DashboardSettingsView: View {
                         Text(store.tr(field.label)).lineLimit(1)
                     }
                     .font(.system(size: 11, weight: .medium))
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 8).padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 8).padding(.vertical, 6)
                     .background(.quaternary, in: RoundedRectangle(cornerRadius: 7))
                     .onDrag { dragged = field; source = nil; return NSItemProvider(object: field.rawValue as NSString) }
                 }

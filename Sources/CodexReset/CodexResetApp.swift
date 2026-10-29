@@ -134,6 +134,11 @@ final class DashboardStore: ObservableObject {
         case .extraReset: return forecast?.presentation(at: now, language: language).headline.replacingOccurrences(of: "\n", with: " ")
             ?? (isRefreshingForecast || forecastError == nil ? tr("Buscando previsão…") : tr("Previsão indisponível"))
         case .weeklyReset: return usage?.weeklyWindow?.resetsAt.flatMap { ResetCountdown.remaining(until: $0, at: now) }.map { tr("Em %@", $0) } ?? tr("Aguardando atualização")
+        case .fiveHourReset:
+            guard let usage else { return tr("Aguardando atualização") }
+            guard let window = usage.fiveHourWindow else { return tr("Não informado pelo Codex") }
+            return window.resetsAt.flatMap { ResetCountdown.remaining(until: $0, at: now) }
+                .map { tr("Em %@", $0) } ?? tr("Aguardando atualização")
         case .lastReset: return lastResetNotice.map { $0.elapsed(at: now, language: language) } ?? tr("Ainda não observado")
         case .tiboAnnouncement: return "Tibo"
         }
@@ -877,13 +882,13 @@ private struct CenteredDetailView: View {
                 Text(store.tr(field.label).uppercased(with: store.language.locale)).detailHeading()
                 Text(store.text(for: field, at: now) ?? store.tr("Sem atividade"))
                     .font(.system(size: 12, weight: .semibold)).lineLimit(2).minimumScaleFactor(0.75)
-                    .frame(maxWidth: .infinity, minHeight: field == .extraReset || field == .weeklyReset ? 32 : 18)
+                    .frame(maxWidth: .infinity, minHeight: field == .extraReset || field == .weeklyReset || field == .fiveHourReset ? 32 : 18)
                 if field == .extraReset {
                     Text(extraCaption(at: now)).font(.system(size: 10)).foregroundStyle(Visual.secondary).lineLimit(1)
                 } else if field == .tokenRate || field == .outputTokenRate {
                     Text(field == .tokenRate ? store.tr("Entrada + saída · cache incluído") : store.tr("Média de saída"))
                         .font(.system(size: 9)).foregroundStyle(Visual.secondary).lineLimit(1).minimumScaleFactor(0.75)
-                } else if field == .weeklyReset {
+                } else if field == .weeklyReset || field == .fiveHourReset {
                     Text(store.tr("Informado pelo Codex")).font(.system(size: 10)).foregroundStyle(Visual.secondary).lineLimit(1)
                 }
             }.frame(maxWidth: .infinity)

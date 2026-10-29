@@ -100,6 +100,8 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable, Sendable {
         "Conversas ativas": ["Active chats", "Chats activos"],
         "Franquia restante": ["Remaining quota", "Cuota restante"],
         "Reset extra": ["Extra reset", "Reinicio extra"],
+        "Reset de 5 horas": ["5-hour reset", "Reinicio de 5 horas"],
+        "Não informado pelo Codex": ["Not reported by Codex", "No informado por Codex"],
         "Reset semanal": ["Weekly reset", "Reinicio semanal"],
         "Último reset": ["Last reset", "Último reinicio"],
         "Anúncio do Tibo": ["Tibo’s announcement", "Anuncio de Tibo"],

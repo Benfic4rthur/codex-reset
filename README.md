@@ -82,6 +82,10 @@ Abra a **engrenagem à direita**, alinhada com o botão de atualizar. A janela d
 - Use os controles de tamanho ou **Ctrl + Option + arrastar** no monitor. Na barra, ajusta a área da direita e a altura do topo; no painel aberto, ajusta a largura e o espaço extra dos detalhes. O recorte da câmera permanece ancorado e o topo respeita a altura disponível no macOS. **Ajustar automaticamente** restaura as medidas automáticas.
 - A janela aparece no Dock enquanto estiver aberta. **Ocultar na barra de menus** e o botão vermelho fecham somente as configurações; o monitor continua funcionando. Reabra pela engrenagem.
 
+### Reset de 5 horas (opcional)
+
+Nas configurações, arraste **Reset de 5 horas** para a posição desejada nas linhas do topo ou dos detalhes, ou use o botão **+** da linha. O campo usa a janela de 300 minutos e o horário de renovação informados pela própria conta do Codex, independentemente do plano ou da posição dessa janela na resposta. A contagem acompanha o prazo real; consultar novamente não inicia cinco horas novas. Sem essa janela, mostra **Não informado pelo Codex**; após o prazo, aguarda a atualização da conta. Disponível em português, inglês e espanhol. O campo fica fora da disposição padrão e preserva o layout salvo.
+
 ### Anúncio do Tibo
 
 Arraste **Anúncio do Tibo** para uma linha. Aparece uma foto discreta com o ícone do X; ao clicar na foto, abre o último anúncio de reset de @thsottiaux registrado em codex-resets.com, com horário, texto no idioma escolhido e acesso ao original. Passar o mouse pela foto mantém o painel aberto, mas não abre o cartão; o anúncio exige um clique na foto. Não representa todos os posts do perfil. Também aceita os registros de reset observado publicados pela fonte, mesmo sem campo de autor, validando o link da conta do Tibo no X. Quando o site fornece um resumo, o cartão o identifica como **Resumo do último reset**, com **Referência no X**; quando há o texto da postagem, apresenta o anúncio. Entre representações do mesmo link, prioriza o texto da postagem. Os links aparecem em uma fileira compacta de botões **Link 1**, **Link 2** e **Anúncio original**, abrindo no navegador.

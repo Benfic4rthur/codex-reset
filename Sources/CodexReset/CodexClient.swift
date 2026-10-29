@@ -23,6 +23,11 @@ struct UsageSnapshot {
             .max { ($0.durationMinutes ?? 0) < ($1.durationMinutes ?? 0) }
     }
 
+    /// Identify the five-hour window by its duration, never by API slot or plan.
+    var fiveHourWindow: QuotaWindow? {
+        [primary, secondary].compactMap { $0 }.first { $0.durationMinutes == 300 }
+    }
+
     /// Prefer the weekly allowance for the compact percentage when available.
     var displayedWindow: QuotaWindow? {
         weeklyWindow ?? primary ?? secondary

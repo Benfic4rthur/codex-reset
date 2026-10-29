@@ -31,6 +31,8 @@
 
 - O painel geral abre por hover, mas o cartão do anúncio do Tibo deve abrir somente por clique na foto (ou ativação acessível do botão). Passar o mouse pela foto ou por outra parte do painel não pode abrir esse cartão.
 
+- Ofereça Reset de 5 horas como campo opcional arrastável, fora do layout padrão. Identifique a janela pela duração de 300 minutos em qualquer posição da resposta da conta, sem inferir pelo preço do plano. Use seu resetsAt real e aguarde atualização ao vencer, sem reiniciar a contagem por consulta ou usar a janela semanal como substituta.
+
 ## Privacidade
 
 - Nunca versione nem distribua chaves, tokens, arquivos .env, autenticação do Codex, bancos locais, logs, certificados privados ou dados de conversas.
