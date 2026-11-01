@@ -802,7 +802,8 @@ private struct ThreadCompactView: View {
                             if index == 0 && store.canExpandConversations { disclosureButton(height: 14) }
                         }
                     }
-                }.padding(.leading, 6).padding(.trailing, 8)
+                }.padding(.leading, NotchedActivityLayout.leadingInset)
+                    .padding(.trailing, NotchedActivityLayout.trailingInset)
             } else if !store.preferences.showQuota {
                 Image(systemName: "ellipsis").font(.system(size: 11))
             }

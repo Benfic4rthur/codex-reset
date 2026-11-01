@@ -1,6 +1,8 @@
 import AppKit
 
 enum NotchedActivityLayout {
+    static let leadingInset: CGFloat = 6
+    static let trailingInset: CGFloat = 16
     static func width(for thread: ActiveThread?, hasDisclosure: Bool, maximum: CGFloat,
                       preferences: DashboardPreferences = DashboardPreferences(), isCapsule: Bool = false) -> CGFloat {
         guard let thread else { return 0 }
@@ -22,6 +24,6 @@ enum NotchedActivityLayout {
             row.reduce(CGFloat(0)) { $0 + measure($1, size: rows.count == 1 ? 10 : index == 0 ? 9.2 : 8) }
                 + CGFloat(max(0, row.count - 1)) * 5 + (index == 0 && hasDisclosure ? 18 : 0)
         }
-        return min(maximum, ceil((widths.max() ?? 0) + 14))
+        return min(maximum, ceil((widths.max() ?? 0) + leadingInset + trailingInset))
     }
 }
