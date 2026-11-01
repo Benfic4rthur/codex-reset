@@ -80,6 +80,23 @@ final class NotchGeometryTests: XCTestCase {
         XCTAssertEqual(geometry.quotaStrokeWidth, 2.7)
     }
 
+    func testPhysicalCutoutStaysFullyCoveredWhenContentHeightIsReduced() {
+        let base = NotchGeometry(screenFrame: CGRect(x: 0, y: 0, width: 2336, height: 1510),
+            menuBarHeight: 44, safeAreaTop: 43.5, notchGap: 250, notchCenterX: 1168)
+        for height: Double? in [nil, 20, 36] {
+            var preferences = DashboardPreferences()
+            preferences.preferredCompactHeight = height
+            let geometry = base.fittingLayout(rows: [], hasDisclosure: false, preferences: preferences)
+            XCTAssertEqual(geometry.surfaceHeight, 43.5)
+            XCTAssertLessThanOrEqual(geometry.compactHeight, geometry.surfaceHeight)
+            XCTAssertEqual(geometry.frame.maxY, 1510)
+            let detailTop = geometry.envelopeHeight - geometry.surfaceHeight
+            XCTAssertFalse(geometry.detailContains(CGPoint(x: geometry.envelopeWidth / 2, y: detailTop + 0.1), height: geometry.detailHeight))
+            XCTAssertTrue(geometry.detailContains(CGPoint(x: geometry.envelopeWidth / 2, y: detailTop - 0.1), height: geometry.detailHeight))
+            XCTAssertGreaterThanOrEqual(geometry.envelopeWidth - geometry.expandedWidth, geometry.surfaceOverhang * 2)
+        }
+    }
+
     func testLargeQuotaFitsAllPercentagesAndHoverInsideTheMeasuredBar() {
         for gap: CGFloat in [0, 180] {
             for barHeight: CGFloat in gap == 0 ? [18, 22, 24, 28, 38, 48, 64] : [28, 32, 38, 48] {

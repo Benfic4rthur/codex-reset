@@ -35,6 +35,8 @@
 
 - Ofereça uma opção local para exibir a porcentagem restante da janela de 5 horas abaixo do indicador principal. Use somente o dado real da conta, deixe o valor em branco quando indisponível e preserve layouts antigos. Permita escolher Semanal, 5 horas ou As duas; com ambas, use fontes do mesmo tamanho. Encaixe as duas linhas na altura medida da barra, incluindo 100%, sem mover a câmera ou alargar o topo no hover.
 
+- Nos Macs com notch, separe a altura do conteúdo da altura do fundo: o fundo deve cobrir toda a altura física informada pelo macOS, inclusive após ajustes manuais. Desenhe as curvas de encaixe no topo e um contorno único para os detalhes, com ombros arredondados somente abaixo da barra; não una duas formas com cantos que deixem falhas na emenda.
+
 ## Privacidade
 
 - Nunca versione nem distribua chaves, tokens, arquivos .env, autenticação do Codex, bancos locais, logs, certificados privados ou dados de conversas.

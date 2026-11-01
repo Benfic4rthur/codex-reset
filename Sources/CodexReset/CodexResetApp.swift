@@ -553,29 +553,49 @@ struct NotchSurface: Shape {
                         cornerRadius: corner)
         }
 
-        func surface(width: CGFloat, top: CGFloat, bottom: CGFloat, corner: CGFloat) -> Path {
-            let left = center - width / 2
-            let right = center + width / 2
-            var path = Path()
-            path.move(to: CGPoint(x: left, y: top))
-            path.addLine(to: CGPoint(x: right, y: top))
-            path.addLine(to: CGPoint(x: right, y: bottom - corner))
-            path.addQuadCurve(to: CGPoint(x: right - corner, y: bottom),
-                control: CGPoint(x: right, y: bottom))
-            path.addLine(to: CGPoint(x: left + corner, y: bottom))
-            path.addQuadCurve(to: CGPoint(x: left, y: bottom - corner),
-                control: CGPoint(x: left, y: bottom))
-            path.addLine(to: CGPoint(x: left, y: top))
-            path.closeSubpath()
-            return path
+        // A single outline prevents holes where the compact bottom corners used
+        // to meet the separate details rectangle. Shoulder curves stay below
+        // the physical notch; only the small screen-edge curves flare above it.
+        let left = center - compactWidth / 2
+        let right = center + compactWidth / 2
+        let expandedWidth = depth > 0 ? max(width, compactWidth) : compactWidth
+        let detailLeft = center - expandedWidth / 2
+        let detailRight = center + expandedWidth / 2
+        let flare = min(6, compactHeight * 0.18)
+        let spread = (expandedWidth - compactWidth) / 2
+        let neck = min(6, spread / 3, depth / 3)
+        let shoulder = min(12, spread / 3, depth / 3)
+        let bottomRadius = min(17, expandedWidth / 2,
+            depth > 0 && spread > 0 ? max(0, depth - neck - shoulder) : bottom / 2)
+        var path = Path()
+        path.move(to: CGPoint(x: left - flare, y: 0))
+        path.addLine(to: CGPoint(x: right + flare, y: 0))
+        path.addQuadCurve(to: CGPoint(x: right, y: flare), control: CGPoint(x: right, y: 0))
+        if depth > 0 && spread > 0 {
+            path.addLine(to: CGPoint(x: right, y: compactHeight))
+            path.addQuadCurve(to: CGPoint(x: right + neck, y: compactHeight + neck),
+                control: CGPoint(x: right, y: compactHeight + neck))
+            path.addLine(to: CGPoint(x: detailRight - shoulder, y: compactHeight + neck))
+            path.addQuadCurve(to: CGPoint(x: detailRight, y: compactHeight + neck + shoulder),
+                control: CGPoint(x: detailRight, y: compactHeight + neck))
         }
-
-        var path = surface(width: compactWidth, top: 0, bottom: compactHeight, corner: 17)
-        if depth > 0 {
-            // The details may expand below the menu bar without widening its top.
-            path.addPath(surface(width: max(width, compactWidth), top: compactHeight,
-                bottom: bottom, corner: min(17, depth / 2)))
+        path.addLine(to: CGPoint(x: detailRight, y: bottom - bottomRadius))
+        path.addQuadCurve(to: CGPoint(x: detailRight - bottomRadius, y: bottom),
+            control: CGPoint(x: detailRight, y: bottom))
+        path.addLine(to: CGPoint(x: detailLeft + bottomRadius, y: bottom))
+        path.addQuadCurve(to: CGPoint(x: detailLeft, y: bottom - bottomRadius),
+            control: CGPoint(x: detailLeft, y: bottom))
+        if depth > 0 && spread > 0 {
+            path.addLine(to: CGPoint(x: detailLeft, y: compactHeight + neck + shoulder))
+            path.addQuadCurve(to: CGPoint(x: detailLeft + shoulder, y: compactHeight + neck),
+                control: CGPoint(x: detailLeft, y: compactHeight + neck))
+            path.addLine(to: CGPoint(x: left - neck, y: compactHeight + neck))
+            path.addQuadCurve(to: CGPoint(x: left, y: compactHeight),
+                control: CGPoint(x: left, y: compactHeight + neck))
         }
+        path.addLine(to: CGPoint(x: left, y: flare))
+        path.addQuadCurve(to: CGPoint(x: left - flare, y: 0), control: CGPoint(x: left, y: 0))
+        path.closeSubpath()
         return path
     }
 }
@@ -603,7 +623,7 @@ private struct NotchRootView: View {
                 ThreadCompactView(store: store, geometry: geometry)
                     .frame(width: rightWidth, height: geometry.compactHeight)
             }
-            .frame(width: compactWidth, height: geometry.compactHeight)
+            .frame(width: compactWidth, height: geometry.surfaceHeight)
             .clipped()
             .overlay(alignment: store.preferences.showQuota ? .leading : .trailing) {
                 if store.hasUnseenReset {
@@ -627,7 +647,7 @@ private struct NotchRootView: View {
             NotchSurface(
                 width: expanded ? geometry.expandedWidth : compactWidth,
                 compactWidth: compactWidth,
-                compactHeight: geometry.compactHeight,
+                compactHeight: geometry.surfaceHeight,
                 visibleDepth: visibleDepth,
                 isCapsule: geometry.isCapsule
             )

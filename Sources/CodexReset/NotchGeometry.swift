@@ -58,6 +58,11 @@ struct NotchGeometry: Equatable {
         }
     }
 
+    /// The physical cutout must stay covered even when the user shrinks the content.
+    var surfaceHeight: CGFloat { isCapsule ? compactHeight : topActivationHeight }
+
+    var surfaceOverhang: CGFloat { isCapsule ? 0 : min(6, surfaceHeight * 0.18) }
+
     var quotaDiameter: CGFloat { min(30, max(8, compactHeight - 4)) }
     var quotaStrokeWidth: CGFloat { min(2.7, quotaDiameter / 10) }
     var capsuleQuotaFontSize: CGFloat { min(17, max(1, compactHeight - 4)) }
@@ -125,8 +130,8 @@ struct NotchGeometry: Equatable {
         let detailMinimum = isCapsule ? 320 : leftWingWidth + gapWidth + 112
         return max(detailMinimum, compactWidth(hasActivity: true), customDetailWidth)
     }
-    var envelopeWidth: CGFloat { expandedWidth + 8 }
-    var envelopeHeight: CGFloat { compactHeight + listDetailHeight + 8 }
+    var envelopeWidth: CGFloat { expandedWidth + (isCapsule ? 8 : 16) }
+    var envelopeHeight: CGFloat { surfaceHeight + listDetailHeight + 8 }
     var surfaceCenterX: CGFloat {
         isCapsule ? centerX : centerX + (rightWingWidth - leftWingWidth) / 2
     }
@@ -144,21 +149,22 @@ struct NotchGeometry: Equatable {
         // This is an activation area only: include the entire camera/notch
         // height and a small side tolerance without growing the visible panel
         // or intercepting clicks in the neighboring apps.
+        let tolerance = max(4, surfaceOverhang)
         return screenX >= screenFrame.minX && screenX <= screenFrame.maxX
-            && point.x >= x - 4 && point.x <= x + width + 4
+            && point.x >= x - tolerance && point.x <= x + width + tolerance
             && point.y >= screenTop - topActivationHeight && point.y <= screenTop
     }
 
     func detailContains(_ point: CGPoint, height: CGFloat) -> Bool {
         let x = (envelopeWidth - expandedWidth) / 2
         return point.x >= x && point.x <= x + expandedWidth
-            && point.y >= envelopeHeight - compactHeight - height
-            && point.y < envelopeHeight - compactHeight
+            && point.y >= envelopeHeight - surfaceHeight - height
+            && point.y < envelopeHeight - surfaceHeight
     }
 
     func disclosureContains(_ point: CGPoint) -> Bool {
         let rightEdge = (envelopeWidth + compactWidth(hasActivity: true)) / 2
         return point.x >= rightEdge - 26 && point.x <= rightEdge
-            && point.y >= envelopeHeight - compactHeight && point.y <= envelopeHeight
+            && point.y >= envelopeHeight - surfaceHeight && point.y <= envelopeHeight
     }
 }
