@@ -72,7 +72,7 @@ Ao abrir o painel com o mouse, a porcentagem cresce um pouco quando há espaço.
 
 ## Monte o seu painel
 
-Abra a **engrenagem à direita**, alinhada com o botão de atualizar. A janela de configurações mostra uma tela de Mac, com o conjunto preto centralizado e as áreas esquerda, câmera e direita identificadas. O botão **Editor anterior** permite comparar com a disposição compacta. A janela acomoda o conteúdo sem rolagem interna; em telas menores, usa abas para as medidas e opções. Os campos para arrastar incluem: conversa, projeto, tokens por segundo, modelo/agente, esforço, número de conversas ativas, franquia e resets.
+Abra a **engrenagem no centro** do painel. O botão de atualizar fica à esquerda e o de desligar à direita. A janela de configurações mostra uma tela de Mac, com o conjunto preto centralizado e as áreas esquerda, câmera e direita identificadas. O botão **Editor anterior** permite comparar com a disposição compacta. A janela acomoda o conteúdo sem rolagem interna; em telas menores, usa abas para as medidas e opções. Os campos para arrastar incluem: conversa, projeto, tokens por segundo, modelo/agente, esforço, número de conversas ativas, franquia e resets.
 
 - Arraste para as **duas linhas da direita** ou as **três linhas do painel aberto**. Arraste novamente para mudar a ordem e use **×** para remover. O menu **+** permite adicionar sem arrastar.
 - Por exemplo: **conversa + tokens/s** na primeira linha e **modelo + esforço** na segunda. Também pode esvaziar a direita e manter somente a porcentagem à esquerda.

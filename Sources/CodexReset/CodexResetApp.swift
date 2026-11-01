@@ -889,22 +889,22 @@ private struct CenteredDetailView: View {
                 forecastRefreshButton.offset(x: refreshButtonX - 14, y: 2)
             }
             .overlay(alignment: .topTrailing) {
-                Button { store.onOpenSettings?() } label: {
-                    Image(systemName: "gearshape").font(.system(size: 10, weight: .medium))
-                        .frame(width: 28, height: 28).contentShape(Rectangle())
-                }
-                .buttonStyle(.plain).foregroundStyle(Visual.muted)
-                .accessibilityLabel(store.tr("Abrir configurações")).help(store.tr("Configurações do Codex Reset"))
-                .modifier(PointingHandCursor())
-                .offset(x: -(refreshButtonX - 14), y: 2)
-            }
-            .overlay(alignment: .top) {
                 Button { NSApp.terminate(nil) } label: {
                     Image(systemName: "power").font(.system(size: 10, weight: .medium))
                         .frame(width: 28, height: 28).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain).foregroundStyle(Visual.muted)
                 .accessibilityLabel(store.tr("Fechar Codex Reset")).help(store.tr("Fechar Codex Reset"))
+                .modifier(PointingHandCursor())
+                .offset(x: -(refreshButtonX - 14), y: 2)
+            }
+            .overlay(alignment: .top) {
+                Button { store.onOpenSettings?() } label: {
+                    Image(systemName: "gearshape").font(.system(size: 10, weight: .medium))
+                        .frame(width: 28, height: 28).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).foregroundStyle(Visual.muted)
+                .accessibilityLabel(store.tr("Abrir configurações")).help(store.tr("Configurações do Codex Reset"))
                 .modifier(PointingHandCursor()).padding(.top, 2)
             }
         }

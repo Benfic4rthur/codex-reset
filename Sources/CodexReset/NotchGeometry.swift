@@ -122,7 +122,7 @@ struct NotchGeometry: Equatable {
     }
 
     func toolbarRefreshCenterX(hasActivity: Bool) -> CGFloat {
-        // Keep the power button reachable when the quota is centered or hidden.
+        // Keep the outer controls clear of the centered settings button.
         min(quotaCenterXInDetails(hasActivity: hasActivity), expandedWidth / 2 - 40)
     }
 

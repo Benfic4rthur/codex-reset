@@ -222,9 +222,9 @@ private struct DashboardSettingsView: View {
                                 HStack {
                                     Image(systemName: "arrow.clockwise")
                                     Spacer()
-                                    Image(systemName: "power")
-                                    Spacer()
                                     Image(systemName: "gearshape")
+                                    Spacer()
+                                    Image(systemName: "power")
                                 }.font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).padding(.horizontal, 20)
                                 Text(store.tr("PAINEL ABERTO · TRÊS LINHAS")).font(.system(size: 8, weight: .semibold)).foregroundStyle(.white.opacity(0.4))
                                 ForEach(0..<3) { row in layoutRow(.details, row: row) }
@@ -280,9 +280,9 @@ private struct DashboardSettingsView: View {
                     HStack {
                         Image(systemName: "arrow.clockwise")
                         Spacer()
-                        Image(systemName: "power")
-                        Spacer()
                         Image(systemName: "gearshape")
+                        Spacer()
+                        Image(systemName: "power")
                     }.font(.system(size: 10)).foregroundStyle(.secondary).padding(.horizontal, 12)
                     ForEach(0..<3) { row in layoutRow(.details, row: row) }
                 }
