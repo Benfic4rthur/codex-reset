@@ -82,7 +82,7 @@ Abra a **engrenagem à direita**, alinhada com o botão de atualizar. A janela d
 - Use os controles de tamanho ou **Ctrl + Option + arrastar** no monitor. Na barra, ajusta a área da direita e a altura do topo; no painel aberto, ajusta a largura e o espaço extra dos detalhes. O recorte da câmera permanece ancorado e o topo respeita a altura disponível no macOS. **Ajustar automaticamente** restaura as medidas automáticas.
 - A janela aparece no Dock enquanto estiver aberta. **Ocultar na barra de menus** e o botão vermelho fecham somente as configurações; o monitor continua funcionando. Reabra pela engrenagem.
 
-Nos Macs com notch, o fundo preto cobre toda a altura física do recorte informada pelo macOS, mesmo quando a altura do conteúdo é reduzida manualmente. As curvas do topo encaixam o desenho na borda da tela; o painel expandido usa um contorno único com ombros arredondados abaixo da barra, mantendo a largura compacta do topo e a câmera ancorada.
+Nos Macs com notch, o fundo preto cobre toda a altura física do recorte informada pelo macOS, mesmo quando a altura do conteúdo é reduzida manualmente. As curvas do topo encaixam o desenho na borda da tela; o painel expandido usa um contorno único com a mesma largura do topo até a base, sem degraus nas laterais. Fechado, mantém a largura compacta; o conteúdo do topo e a câmera permanecem ancorados ao abrir.
 
 ### Porcentagem de 5 horas abaixo da semanal
 

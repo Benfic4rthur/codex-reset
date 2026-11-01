@@ -141,8 +141,8 @@ struct NotchGeometry: Equatable {
                width: envelopeWidth, height: envelopeHeight)
     }
 
-    func topContains(_ point: CGPoint, hasActivity: Bool) -> Bool {
-        let width = compactWidth(hasActivity: hasActivity)
+    func topContains(_ point: CGPoint, hasActivity: Bool, expanded: Bool = false) -> Bool {
+        let width = expanded ? expandedWidth : compactWidth(hasActivity: hasActivity)
         let x = (envelopeWidth - width) / 2
         let screenTop = screenFrame.maxY - frame.minY
         let screenX = frame.minX + point.x

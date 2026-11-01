@@ -496,8 +496,9 @@ private final class NotchWindow: NSObject {
     private func updatePointer() {
         let point = panel.convertPoint(fromScreen: NSEvent.mouseLocation)
         let detailHeight = store.listExpanded ? geometry.listDetailHeight : geometry.detailHeight
-        let hovering = store.showsAnnouncement || geometry.topContains(point, hasActivity: store.hasTopContent)
-            || ((store.showHoverDetails || store.listExpanded)
+        let expanded = store.showHoverDetails || store.listExpanded
+        let hovering = store.showsAnnouncement || geometry.topContains(point, hasActivity: store.hasTopContent, expanded: expanded)
+            || (expanded
                 && geometry.detailContains(point, height: detailHeight))
         if hovering != pointerInside {
             pointerInside = hovering
@@ -553,46 +554,23 @@ struct NotchSurface: Shape {
                         cornerRadius: corner)
         }
 
-        // A single outline prevents holes where the compact bottom corners used
-        // to meet the separate details rectangle. Shoulder curves stay below
-        // the physical notch; only the small screen-edge curves flare above it.
-        let left = center - compactWidth / 2
-        let right = center + compactWidth / 2
-        let expandedWidth = depth > 0 ? max(width, compactWidth) : compactWidth
-        let detailLeft = center - expandedWidth / 2
-        let detailRight = center + expandedWidth / 2
+        // The expanded panel has one uniform width from the screen edge to
+        // its bottom. The header content stays anchored around the camera.
+        let surfaceWidth = max(width, compactWidth)
+        let left = center - surfaceWidth / 2
+        let right = center + surfaceWidth / 2
         let flare = min(6, compactHeight * 0.18)
-        let spread = (expandedWidth - compactWidth) / 2
-        let neck = min(6, spread / 3, depth / 3)
-        let shoulder = min(12, spread / 3, depth / 3)
-        let bottomRadius = min(17, expandedWidth / 2,
-            depth > 0 && spread > 0 ? max(0, depth - neck - shoulder) : bottom / 2)
+        let bottomRadius = min(17, bottom / 2, surfaceWidth / 2)
         var path = Path()
         path.move(to: CGPoint(x: left - flare, y: 0))
         path.addLine(to: CGPoint(x: right + flare, y: 0))
         path.addQuadCurve(to: CGPoint(x: right, y: flare), control: CGPoint(x: right, y: 0))
-        if depth > 0 && spread > 0 {
-            path.addLine(to: CGPoint(x: right, y: compactHeight))
-            path.addQuadCurve(to: CGPoint(x: right + neck, y: compactHeight + neck),
-                control: CGPoint(x: right, y: compactHeight + neck))
-            path.addLine(to: CGPoint(x: detailRight - shoulder, y: compactHeight + neck))
-            path.addQuadCurve(to: CGPoint(x: detailRight, y: compactHeight + neck + shoulder),
-                control: CGPoint(x: detailRight, y: compactHeight + neck))
-        }
-        path.addLine(to: CGPoint(x: detailRight, y: bottom - bottomRadius))
-        path.addQuadCurve(to: CGPoint(x: detailRight - bottomRadius, y: bottom),
-            control: CGPoint(x: detailRight, y: bottom))
-        path.addLine(to: CGPoint(x: detailLeft + bottomRadius, y: bottom))
-        path.addQuadCurve(to: CGPoint(x: detailLeft, y: bottom - bottomRadius),
-            control: CGPoint(x: detailLeft, y: bottom))
-        if depth > 0 && spread > 0 {
-            path.addLine(to: CGPoint(x: detailLeft, y: compactHeight + neck + shoulder))
-            path.addQuadCurve(to: CGPoint(x: detailLeft + shoulder, y: compactHeight + neck),
-                control: CGPoint(x: detailLeft, y: compactHeight + neck))
-            path.addLine(to: CGPoint(x: left - neck, y: compactHeight + neck))
-            path.addQuadCurve(to: CGPoint(x: left, y: compactHeight),
-                control: CGPoint(x: left, y: compactHeight + neck))
-        }
+        path.addLine(to: CGPoint(x: right, y: bottom - bottomRadius))
+        path.addQuadCurve(to: CGPoint(x: right - bottomRadius, y: bottom),
+            control: CGPoint(x: right, y: bottom))
+        path.addLine(to: CGPoint(x: left + bottomRadius, y: bottom))
+        path.addQuadCurve(to: CGPoint(x: left, y: bottom - bottomRadius),
+            control: CGPoint(x: left, y: bottom))
         path.addLine(to: CGPoint(x: left, y: flare))
         path.addQuadCurve(to: CGPoint(x: left - flare, y: 0), control: CGPoint(x: left, y: 0))
         path.closeSubpath()

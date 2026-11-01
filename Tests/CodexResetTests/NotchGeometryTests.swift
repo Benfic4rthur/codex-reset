@@ -97,6 +97,18 @@ final class NotchGeometryTests: XCTestCase {
         }
     }
 
+    func testExpandedTopUsesTheWholePanelWidthForHoverWithoutGrowingClosedActivation() {
+        var preferences = DashboardPreferences()
+        preferences.preferredDetailWidth = 700
+        let geometry = NotchGeometry(screenFrame: CGRect(x: 0, y: 0, width: 2336, height: 1510),
+            menuBarHeight: 44, safeAreaTop: 43.5, notchGap: 250, notchCenterX: 1168)
+            .fittingLayout(rows: [], hasDisclosure: false, preferences: preferences)
+        let x = (geometry.envelopeWidth - geometry.expandedWidth) / 2 + 2
+        let point = CGPoint(x: x, y: geometry.envelopeHeight - 12)
+        XCTAssertTrue(geometry.topContains(point, hasActivity: false, expanded: true))
+        XCTAssertFalse(geometry.topContains(point, hasActivity: false))
+    }
+
     func testLargeQuotaFitsAllPercentagesAndHoverInsideTheMeasuredBar() {
         for gap: CGFloat in [0, 180] {
             for barHeight: CGFloat in gap == 0 ? [18, 22, 24, 28, 38, 48, 64] : [28, 32, 38, 48] {
